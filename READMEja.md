@@ -1,13 +1,14 @@
-# nostr-following-list-restorer (WIP)
+# nostr-following-list-util (WIP)
 
 [English](README.md)
 
-Nostrのフォローリストを復元しようとするやつ (WIP)
+Nostrのフォローリストを集めたり編集するやつ (WIP)
 
-## 仕組み
+## Features
 
-1. 複数のリレーから過去のフォローイベント (kind:3 Contacts) を探して表示する
-2. 選択したリストを用い、現在の時刻で新しいイベントを作成しリレーに流す
+- 複数のリレーから過去のフォローイベント (kind:3 Contacts) を探して表示する
+- 見つかったフォローリストを出力
+- 選択したリストまたはテキストを用い、現在の時刻で新しいイベントを作成しリレーに流す
 
 ## 使用ツール
 
@@ -17,6 +18,7 @@ Nostrのフォローリストを復元しようとするやつ (WIP)
 
 ## TODO
 
+- ダークモード
 - 英語サポート
 
 ## License

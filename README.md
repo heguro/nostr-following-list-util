@@ -1,11 +1,12 @@
-# nostr-following-list-restorer (WIP)
+# nostr-following-list-util (WIP)
 
 [Japanese](READMEja.md)
 
-## How it works
+## Features
 
-1. Find and display past `kind:3` (Contacts) events from multiple relays
-2. Create and send a new event using selected lists
+- Find and display past `kind:3` (Contacts) events from multiple relays
+- Output found following lists
+- Create and send a new event using selected/imported lists
 
 ## Dependencies
 
@@ -15,6 +16,7 @@
 
 ## TODO
 
+- Dark mode
 - English support
 
 ## License

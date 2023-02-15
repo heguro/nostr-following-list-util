@@ -41,7 +41,7 @@ export const App = () => {
 
   return (
     <LoginContext.Provider value={loginContextValue}>
-      <h1>nostr-following-list-restorer</h1>
+      <h1>nostr-following-list-util</h1>
       <p>Nostrのフォローリストを復元しようとするやつ</p>
       {login.npubHex ? <Main /> : <Login />}
       <p>
@@ -55,10 +55,10 @@ export const App = () => {
       <p>
         GitHub:{' '}
         <a
-          href="https://github.com/heguro/nostr-following-list-restorer"
+          href="https://github.com/heguro/nostr-following-list-util"
           target={login.npubHex ? '_blank' : undefined}
           rel="noreferrer noopener">
-          heguro/nostr-following-list-restorer
+          heguro/nostr-following-list-util
         </a>{' '}
         (MIT License)
       </p>
