@@ -41,8 +41,10 @@ export const App = () => {
 
   return (
     <LoginContext.Provider value={loginContextValue}>
-      <h1>nostr-following-list-util</h1>
-      <p>Nostrのフォローリストを復元しようとするやつ</p>
+      <h1>NostrFlu</h1>
+      <p>
+        Nostr Following List Util: Nostrのフォローリストを集めたり編集するやつ
+      </p>
       {login.npubHex ? <Main /> : <Login />}
       <p>
         公開鍵でログインした場合、フォローリストの取得・確認のみ可能です。

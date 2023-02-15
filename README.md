@@ -1,6 +1,8 @@
-# nostr-following-list-util (WIP)
+# nostr-following-list-util (NostrFlu)
 
 [Japanese](READMEja.md)
+
+Currently WIP.
 
 ## Features
 

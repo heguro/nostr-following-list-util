@@ -1,4 +1,4 @@
-# nostr-following-list-util (WIP)
+# nostr-following-list-util (NostrFlu)
 
 [English](README.md)
 
