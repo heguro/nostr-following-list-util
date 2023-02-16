@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'preact/hooks';
 import { Nip07Nostr } from '../../@types/nip07';
 import { LoginContext } from '../../app';
 import * as NostrTools from '../../lib/nostrTools';
-import './login.css';
+import './Login.css';
 
 declare global {
   var nostr: Nip07Nostr | undefined;
@@ -106,7 +106,12 @@ export const Login = () => {
             value={loginKeyInput}
           />
           <button disabled={!!loginStatus} type="submit">
-            秘密鍵/公開鍵でログイン
+            {/^npub/.test(loginKeyInput)
+              ? '公開鍵'
+              : /^nsec/.test(loginKeyInput)
+              ? '秘密鍵'
+              : '秘密鍵/公開鍵'}
+            でログイン
           </button>
         </form>
       </div>

@@ -45,7 +45,8 @@ export const App = () => {
       <p>
         Nostr Following List Util: Nostrのフォローリストを集めたり編集するやつ
       </p>
-      {login.npubHex ? <Main /> : <Login />}
+      {!login.npubHex && <Login />}
+      {login.npubHex && <Main />}
       <p>
         公開鍵でログインした場合、フォローリストの取得・確認のみ可能です。
         <br />

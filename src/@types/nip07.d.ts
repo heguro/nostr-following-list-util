@@ -1,4 +1,4 @@
-import { Event as NostrToolsEvent } from '../lib/nostrTools';
+import type { Event as NostrToolsEvent } from '../lib/nostrTools';
 
 interface Nip07Nostr {
   getPublicKey(): Promise<string>;

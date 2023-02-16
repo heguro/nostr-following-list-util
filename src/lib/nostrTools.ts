@@ -1,5 +1,4 @@
 // from nostr-tools/index.ts
-// nip06 is excluded to reduce bundle size
 
 export * from 'nostr-tools/event';
 export * as fj from 'nostr-tools/fakejson';
@@ -7,7 +6,7 @@ export * from 'nostr-tools/filter';
 export * from 'nostr-tools/keys';
 export * as nip04 from 'nostr-tools/nip04';
 export * as nip05 from 'nostr-tools/nip05';
-// export * as nip06 from 'nostr-tools/nip06'
+// export * as nip06 from 'nostr-tools/nip06' // excluded to reduce bundle size
 export * as nip19 from 'nostr-tools/nip19';
 export * as nip26 from 'nostr-tools/nip26';
 export * from 'nostr-tools/pool';
