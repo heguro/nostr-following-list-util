@@ -351,14 +351,14 @@ export const Main = () => {
         {
           authors: [login.npubHex],
           kinds: [3],
-          limit: 5,
+          limit: 20,
         },
       ])),
       ...(await relay.list([
         {
           authors: [login.npubHex],
           kinds: [10002],
-          limit: 5,
+          limit: 20,
         },
       ])),
     ] as NostrEvent[];
