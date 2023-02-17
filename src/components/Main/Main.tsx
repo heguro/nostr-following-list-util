@@ -254,14 +254,14 @@ export const Main = () => {
     console.log('broadcasting to', relay.url);
   };
 
-  const startPublishNewKind3 = async (contactList: ContactList) => {
+  const signAndPublish = async ({
+    contactList,
+    event,
+  }: {
+    contactList: ContactList;
+    event: NostrEvent;
+  }) => {
     setStatusText('署名中…');
-    const event: NostrEvent = {
-      ...contactList.event,
-      created_at: (Date.now() / 1000) | 0,
-      id: undefined,
-      sig: undefined,
-    };
     event.id = NostrTools.getEventHash(event);
     let signedEvent: NostrEvent | undefined;
     try {
@@ -292,6 +292,16 @@ export const Main = () => {
     }
   };
 
+  const startPublishNewKind3 = async (contactList: ContactList) => {
+    const event: NostrEvent = {
+      ...contactList.event,
+      created_at: (Date.now() / 1000) | 0,
+      id: undefined,
+      sig: undefined,
+    };
+    signAndPublish({ contactList, event });
+  };
+
   const startBroadcast = (contactList: ContactList) => {
     const { event } = contactList;
     console.log('startedBroadcast', event);
@@ -304,6 +314,27 @@ export const Main = () => {
         broadcastToRelay(connection.relay, event);
       }
     }
+  };
+
+  const startFollowMyself = async ({
+    contactList,
+    unfollow,
+  }: {
+    contactList: ContactList;
+    unfollow: boolean;
+  }) => {
+    const newContactHexes: string[] = contactList.contacts.filter(
+      hex => hex !== login.npubHex,
+    );
+    if (!unfollow) newContactHexes.push(login.npubHex);
+    const event: NostrEvent = {
+      kind: 3,
+      created_at: (Date.now() / 1000) | 0,
+      tags: newContactHexes.map(hex => ['p', hex]),
+      content: contactList.event.content,
+      pubkey: login.npubHex,
+    };
+    signAndPublish({ contactList, event });
   };
 
   const addConnection = async (url: string) => {
@@ -588,26 +619,49 @@ export const Main = () => {
                   </button>
                   {contactList.event.kind === 3 &&
                     contactList.createdAt === latestGotKind3Time && (
-                      <button
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `フォロー数${
-                                contactList.contacts.length
-                              }、 リレー接続数${
-                                contactList.relays.length
-                              } のデータが ${
-                                (publishMode === 'registered' &&
-                                  contactList.relays.length) ||
-                                Object.keys(connections).length
-                              } 件のリレーに反映(ブロードキャスト)されます。 一度行った操作は元に戻せない可能性が非常に高く、事前のバックアップをおすすめします。 よろしいですか？`,
-                            )
-                          ) {
-                            startBroadcast(contactList);
-                          }
-                        }}>
-                        ブロードキャスト(再配信)
-                      </button>
+                      <>
+                        <button
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `フォロー数${
+                                  contactList.contacts.length
+                                }、 リレー接続数${
+                                  contactList.relays.length
+                                } のデータが ${
+                                  (publishMode === 'registered' &&
+                                    contactList.relays.length) ||
+                                  Object.keys(connections).length
+                                } 件のリレーに反映(ブロードキャスト)されます。 一度行った操作は元に戻せない可能性が非常に高く、事前のバックアップをおすすめします。 よろしいですか？`,
+                              )
+                            ) {
+                              startBroadcast(contactList);
+                            }
+                          }}>
+                          ブロードキャスト(再配信)
+                        </button>
+                        <button
+                          onClick={() => {
+                            const unfollow = contactList.contacts.includes(
+                              login.npubHex,
+                            );
+                            const followCount =
+                              contactList.contacts.length + (unfollow ? -1 : 1);
+                            if (
+                              confirm(
+                                `自分をフォロー${
+                                  unfollow ? '解除' : ''
+                                }します。 フォロー数は ${followCount} になります。 よろしいですか？\n (もし現在「何もしていないのにフォローが減った」状態の場合、先にできるだけ復元させることをおすすめします)`,
+                              )
+                            ) {
+                              startFollowMyself({ contactList, unfollow });
+                            }
+                          }}>
+                          {contactList.contacts.includes(login.npubHex)
+                            ? '自分をフォロー解除する'
+                            : '自分をフォローする'}
+                        </button>
+                      </>
                     )}
                 </>
               )}
