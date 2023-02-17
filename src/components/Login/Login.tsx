@@ -40,9 +40,10 @@ export const Login = () => {
             (async () => {
               if (window.nostr) {
                 setLoginStatus('loading');
-                const relays = await window.nostr.getRelays();
+                const relays = window.nostr.getRelays
+                  ? await window.nostr.getRelays()
+                  : {};
                 const npubHex = await window.nostr.getPublicKey();
-                //const npub = NostrTools.nip19.npubEncode(npubHex);
                 setLogin({
                   type: 'nip07',
                   npubHex,
