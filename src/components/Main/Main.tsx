@@ -3,7 +3,11 @@ import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
 import { NostrEvent } from '../../@types/nostrTools';
 import { LoginContext } from '../../app';
 import * as NostrTools from '../../lib/nostrTools';
-import { jsonParseOrEmptyObject } from '../../lib/util';
+import {
+  jsonParseOrEmptyObject,
+  msecToDateString,
+  secToDateString,
+} from '../../lib/util';
 import './Main.css';
 
 declare global {
@@ -37,28 +41,35 @@ const profileDefault = {
 type Connection = {
   relay: NostrTools.Relay | null;
   sub: NostrTools.Sub | null;
+  selected: boolean;
 };
 let connections: {
   [url: string]: Connection;
 } = {};
+
+type ContactList = {
+  id: string;
+  type: 'contacts' | 'relays';
+  createdAt: number;
+  contacts: string[];
+  relays: string[];
+  relaysObj: Nip07Relays;
+  eventFrom: string[];
+  event: NostrEvent;
+  selected: boolean;
+};
 
 let profileCreatedAt = 0;
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
 
 export const Main = () => {
   const [profile, setProfile] = useState(profileDefault);
-  const [contactLists, setContactLists] = useState<
-    {
-      id: string;
-      type: 'contacts' | 'relays';
-      createdAt: number;
-      contacts: string[];
-      relays: string[];
-      eventFrom: string[];
-      event: NostrEvent;
-    }[]
-  >([]);
-  const [statusText, setStatusText] = useState('プロフィールを探しています…');
+  const [contactLists, setContactLists] = useState<ContactList[]>([]);
+  const [latestGotKind3Time, setLatestGotKind3Time] = useState(0);
+  const [statusText, setStatusText] = useState('');
+  const [publishMode, setPublishMode] = useState<'registered' | 'all'>(
+    'registered',
+  );
 
   const { setLogin, login } = useContext(LoginContext);
   const writable = login.type !== 'npub';
@@ -77,8 +88,10 @@ export const Main = () => {
                 .filter(tag => tag[0] === 'p')
                 .map(tag => tag[1]),
               relays: Object.keys(jsonParseOrEmptyObject(event.content)),
+              relaysObj: jsonParseOrEmptyObject(event.content),
               eventFrom,
               event,
+              selected: false,
             }
           : {
               id: event.id || '',
@@ -88,28 +101,151 @@ export const Main = () => {
                 .filter(tag => tag[0] === 'p')
                 .map(tag => tag[1]),
               relays: Object.keys(jsonParseOrEmptyObject(event.content)),
+              relaysObj: jsonParseOrEmptyObject(event.content),
               eventFrom,
               event,
+              selected: false,
             },
     );
     setContactLists(newContactLists);
+    setLatestGotKind3Time(
+      kind3s.find(({ event }) => event.sig && event.kind === 3)?.event
+        .created_at || 0,
+    );
     const newRelays = newContactLists.flatMap(
       contactList => contactList.relays,
     );
     for (const relay of newRelays) {
-      if (!connections[relay]) addConnection(relay);
+      if (!connections[relay] && !connections[relay.replace(/\/$/, '')])
+        addConnection(relay);
     }
+  };
+
+  const loadBackupFile = (text: string, name: string) => {
+    const lines = text.split(/\r\n|\r|\n/).filter(s => s !== '');
+    const headers = lines.filter(s => s.startsWith('#'));
+    const contactHexes = lines.filter(s => !s.startsWith('#'));
+    const relaysLine = headers.find(s => s.startsWith('# relays: '));
+    const pubkeyLine = headers.find(s => s.startsWith('# pubkey: '));
+    const pubkey = pubkeyLine ? pubkeyLine.replace('# pubkey: ', '') : '';
+    const fromOtherUser = pubkey && pubkey !== npub;
+    if (fromOtherUser) {
+      if (
+        !confirm(
+          '公開鍵が異なります。 別のユーザーのリストを読み込もうとしているようです。 よろしいですか？',
+        )
+      )
+        return;
+    }
+    const relays: Nip07Relays = relaysLine
+      ? JSON.parse(relaysLine.replace('# relays: ', ''))
+      : {};
+    const now = Date.now();
+    kind3s.push({
+      eventFrom: [
+        `<${fromOtherUser ? 'backupFromDifferentUser' : 'backup'}: ${name}>`,
+      ],
+      event: {
+        kind: 3,
+        id: `backup-${now}`,
+        created_at: (now / 1000) | 0,
+        tags: contactHexes.map(hex => ['p', hex]),
+        content: JSON.stringify(relays),
+        pubkey: login.npubHex,
+      },
+    });
+    kind3sUpdate();
+  };
+  const downloadBackupFile = (contactList: ContactList) => {
+    const filename = `nostr-followings-${
+      contactList.contacts.length
+    }users_${secToDateString(contactList.createdAt)}.txt`;
+    const file = new Blob(
+      [
+        [
+          `# ${filename} @${profile.username}`,
+          `# pubkey: ${npub}`,
+          `# relays: ${JSON.stringify(contactList.relaysObj)}`,
+          `# from: ${JSON.stringify(contactList.eventFrom)}`,
+          ...contactList.contacts,
+          '',
+        ].join('\r\n'),
+      ],
+      { type: 'text/plain; charset=utf-8' },
+    );
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file);
+    a.download = filename;
+    a.click();
+  };
+
+  const uploadLocalBackupFile = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt';
+    input.onchange = async () => {
+      if (!input.files) return;
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (!reader.result || typeof reader.result !== 'string') return;
+        loadBackupFile(reader.result, file.name);
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  const addCombinedEventFromSelection = () => {
+    const selectedContactLists = contactLists.filter(
+      contactList => contactList.selected,
+    );
+    const newRelays: Nip07Relays = {};
+    const newContactHexes: string[] = [];
+    const now = Date.now();
+    const eventFrom: string[] = [`<combined: ${msecToDateString(now)}>`];
+    for (const contactList of selectedContactLists) {
+      newContactHexes.push(
+        ...contactList.contacts.filter(hex => !newContactHexes.includes(hex)),
+      );
+      // super worst performance!!
+      for (const [url, relay] of Object.entries(contactList.relaysObj)) {
+        if (!newRelays[url]) newRelays[url] = relay;
+      }
+      eventFrom.push(
+        contactList.event.sig
+          ? `<event: ${secToDateString(contactList.createdAt)}>`
+          : contactList.eventFrom[0] || '<null>',
+      );
+    }
+    const event: NostrEvent = {
+      kind: 3,
+      id: `combined-${now}`,
+      created_at: (now / 1000) | 0,
+      tags: newContactHexes.map(hex => ['p', hex]),
+      content: JSON.stringify(newRelays),
+      pubkey: login.npubHex,
+    };
+    kind3s.push({ eventFrom, event });
+    kind3sUpdate();
   };
 
   const broadcastToRelay = (relay: NostrTools.Relay, event: NostrEvent) => {
     const ok = () => {
       console.log('broadcasted to', relay.url);
+      setStatusText(`配信済: ${relay.url}`);
     };
     const seen = () => {
       console.log('seen by', relay.url);
     };
-    const failed = (...args: any) => {
-      console.warn('failed to broadcast to', relay.url, args);
+    const failed = (error: any) => {
+      console.warn('failed to broadcast to', relay.url, error);
+      if (
+        error !== 'event not seen after 5 seconds' &&
+        error !== 'blocked: pubkey not admitted'
+      ) {
+        setStatusText(`配信失敗: ${relay.url} (${error})`);
+      }
     };
     const pub = relay.publish(event);
     pub.on('ok', ok);
@@ -118,20 +254,63 @@ export const Main = () => {
     console.log('broadcasting to', relay.url);
   };
 
-  const startBroadcast = (event: NostrEvent) => {
-    console.log('startedBroadcast', event);
+  const startPublishNewKind3 = async (contactList: ContactList) => {
+    setStatusText('署名中…');
+    const event: NostrEvent = {
+      ...contactList.event,
+      created_at: (Date.now() / 1000) | 0,
+      id: undefined,
+      sig: undefined,
+    };
+    event.id = NostrTools.getEventHash(event);
+    let signedEvent: NostrEvent | undefined;
+    try {
+      signedEvent =
+        login.type === 'nip07' && window.nostr
+          ? await window.nostr.signEvent(event)
+          : login.type === 'nsec' && login.nsecHex
+          ? { ...event, sig: NostrTools.signEvent(event, login.nsecHex) }
+          : undefined;
+    } catch (e) {
+      console.error(e);
+      setStatusText(`署名失敗`);
+      return;
+    }
+    if (!signedEvent) {
+      setStatusText('');
+      return;
+    }
+    console.log('startedPublish', signedEvent);
+    setStatusText('送信開始…');
     for (const [url, connection] of Object.entries(connections)) {
-      if (connection.relay) {
+      if (
+        (publishMode === 'all' || contactList.relaysObj[url]) &&
+        connection.relay
+      ) {
+        broadcastToRelay(connection.relay, signedEvent);
+      }
+    }
+  };
+
+  const startBroadcast = (contactList: ContactList) => {
+    const { event } = contactList;
+    console.log('startedBroadcast', event);
+    setStatusText('ブロードキャスト開始…');
+    for (const [url, connection] of Object.entries(connections)) {
+      if (
+        (publishMode === 'all' || contactList.relaysObj[url]) &&
+        connection.relay
+      ) {
         broadcastToRelay(connection.relay, event);
       }
     }
   };
 
   const addConnection = async (url: string) => {
-    if (connections[url]) return;
+    if (connections[url] || connections[url.replace(/\/$/, '')]) return;
     console.log('connecting to', url);
     const relay = NostrTools.relayInit(url);
-    const connection: Connection = { relay: null, sub: null };
+    const connection: Connection = { relay: null, sub: null, selected: false };
     connections[url] = connection;
     await relay.connect();
     connection.relay = relay;
@@ -142,7 +321,12 @@ export const Main = () => {
       kinds: [0],
       limit: 1,
     });
-    if (kind0Event) {
+    if (
+      kind0Event &&
+      kind0Event.sig &&
+      NostrTools.validateEvent(kind0Event) &&
+      NostrTools.verifySignature({ ...kind0Event, sig: kind0Event.sig })
+    ) {
       const event = kind0Event;
       kind0available = true;
       if (event.created_at > profileCreatedAt) {
@@ -179,6 +363,15 @@ export const Main = () => {
       ])),
     ] as NostrEvent[];
     for (const event of kind3Events) {
+      if (
+        !(
+          event &&
+          event.sig &&
+          NostrTools.validateEvent(event) &&
+          NostrTools.verifySignature({ ...event, sig: event.sig })
+        )
+      )
+        continue;
       const alreadyHadIndex = kind3s.findIndex(
         kind3 =>
           kind3.event.id === event.id &&
@@ -194,7 +387,6 @@ export const Main = () => {
         kind3s.push({ eventFrom: [url], event });
         kind3sUpdated = true;
       }
-      console.log(url, ' kind3: ', event);
       if (event.kind === 3) kind3available = true;
     }
     if (kind3sUpdated) {
@@ -220,6 +412,7 @@ export const Main = () => {
     console.log(`${url}: ok. k0=${kind0available}, k3=${kind3available}`);
   };
   const initConnect = async () => {
+    setStatusText('プロフィールを探しています…');
     const relays = Object.keys({
       ...(login.relays || {}),
       ...relayDefaults,
@@ -294,7 +487,7 @@ export const Main = () => {
                 setContactLists([]);
                 initConnect();
               }}>
-              リロード
+              リロード (再接続)
             </button>
           </div>
         </div>
@@ -302,12 +495,51 @@ export const Main = () => {
       <div class="connection-status">
         <span class="status-text">{statusText}</span>
       </div>
+      <div class="events-actions">
+        <div>
+          (設定) <label for="publish-mode-select">送信先リレー: </label>
+          <select
+            id="publish-mode-select"
+            value={publishMode}
+            onChange={({ target }) => {
+              if (
+                target instanceof HTMLSelectElement &&
+                (target.value === 'registered' || target.value === 'all')
+              ) {
+                setPublishMode(target.value);
+              }
+            }}>
+            <option value="registered">登録済リレー (推奨)</option>
+            <option value="all">できるだけ多くのリレー</option>
+          </select>
+        </div>
+        <button onClick={uploadLocalBackupFile}>バックアップを読み込む</button>
+        <button onClick={addCombinedEventFromSelection}>
+          選択したリストを結合
+        </button>
+      </div>
       <div class="contact-events">
         {contactLists.map((contactList, index) => (
           <div class="contact-event" key={contactList.id}>
             <div class="event-date">
-              Event Creation Time:{' '}
-              {new Date(contactList.createdAt * 1000).toLocaleString()}
+              <label>
+                <input
+                  type="checkbox"
+                  checked={contactList.selected}
+                  onChange={() => {
+                    const newContactLists = [...contactLists];
+                    newContactLists[index] = {
+                      ...contactList,
+                      selected: !contactList.selected,
+                    };
+                    setContactLists(newContactLists);
+                  }}
+                />
+                Event Creation Time:{' '}
+                {contactList.event.sig
+                  ? new Date(contactList.createdAt * 1000).toLocaleString()
+                  : '<new>'}
+              </label>
             </div>
             {contactList.type === 'contacts' && (
               <div class="event-contact-count">
@@ -330,19 +562,62 @@ export const Main = () => {
                 .map(url => url.replace('wss://', ''))
                 .join(', ')}
             </div>
-            {writable && (
-              <div class="event-actions">
-                <button onClick={() => {}}>上書き送信 (TODO)</button>
-                {index === 0 && (
+            <div class="event-actions">
+              {writable && contactList.event.kind === 3 && (
+                <>
                   <button
                     onClick={() => {
-                      startBroadcast(contactList.event);
+                      // a
+                      if (
+                        confirm(
+                          `フォロー数${
+                            contactList.contacts.length
+                          }、 リレー接続数${
+                            contactList.relays.length
+                          } のデータが ${
+                            (publishMode === 'registered' &&
+                              contactList.relays.length) ||
+                            Object.keys(connections).length
+                          } 件のリレーに反映(上書き)されます。 一度行った操作は元に戻せない可能性が非常に高く、事前のバックアップをおすすめします。 よろしいですか？`,
+                        )
+                      ) {
+                        startPublishNewKind3(contactList);
+                      }
                     }}>
-                    ブロードキャスト
+                    上書き送信
                   </button>
-                )}
-              </div>
-            )}
+                  {contactList.event.kind === 3 &&
+                    contactList.createdAt === latestGotKind3Time && (
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `フォロー数${
+                                contactList.contacts.length
+                              }、 リレー接続数${
+                                contactList.relays.length
+                              } のデータが ${
+                                (publishMode === 'registered' &&
+                                  contactList.relays.length) ||
+                                Object.keys(connections).length
+                              } 件のリレーに反映(ブロードキャスト)されます。 一度行った操作は元に戻せない可能性が非常に高く、事前のバックアップをおすすめします。 よろしいですか？`,
+                            )
+                          ) {
+                            startBroadcast(contactList);
+                          }
+                        }}>
+                        ブロードキャスト(再配信)
+                      </button>
+                    )}
+                </>
+              )}
+              <button
+                onClick={() => {
+                  downloadBackupFile(contactList);
+                }}>
+                バックアップ
+              </button>
+            </div>
             <hr />
           </div>
         ))}

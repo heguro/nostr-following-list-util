@@ -2,12 +2,10 @@
 
 [Japanese](READMEja.md)
 
-Currently WIP.
-
 ## Features
 
 - Find and display past `kind:3` (Contacts) events from multiple relays
-- Output found following lists
+- Export following lists
 - Create and send a new event using selected/imported lists
 
 ## Dependencies
@@ -18,7 +16,9 @@ Currently WIP.
 
 ## TODO
 
-- Dark mode
+- Showing users in list
+- Editing list
+- Selecting relays to send
 - English support
 
 ## License

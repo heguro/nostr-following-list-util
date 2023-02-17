@@ -1,8 +1,8 @@
-import type { Event as NostrToolsEvent } from '../lib/nostrTools';
+import { NostrEvent } from './nostrTools';
 
 interface Nip07Nostr {
   getPublicKey(): Promise<string>;
-  signEvent(event: NostrToolsEvent): Promise<NostrToolsEvent>;
+  signEvent(event: NostrEvent): Promise<NostrEvent>;
   getRelays(): Promise<Nip07Relays>;
   nip04: {
     encrypt(pubkey: string, plaintext: string): Promise<string>;

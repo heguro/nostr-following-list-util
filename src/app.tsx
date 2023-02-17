@@ -43,7 +43,7 @@ export const App = () => {
     <LoginContext.Provider value={loginContextValue}>
       <h1>NostrFlu</h1>
       <p>
-        Nostr Following List Util: Nostrのフォローリストを集めたり編集するやつ
+        Nostr Following List Util: Nostrのフォローリストを集めたり再送信するやつ
       </p>
       {!login.npubHex && <Login />}
       {login.npubHex && <Main />}
@@ -54,6 +54,9 @@ export const App = () => {
       </p>
       <p>
         入力された秘密鍵はどこにも送信されず、ブラウザーのメモリ内にのみ保持されます。
+      </p>
+      <p>
+        リレーとの通信状況が常に変動するため、リロードで結果が増減することがあります。
       </p>
       <p>
         GitHub:{' '}

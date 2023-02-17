@@ -2,7 +2,7 @@
   font-family: sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  background-color: #eee;
+  background-color: #f6f6f6;
 }
 
 * {
@@ -20,6 +20,8 @@ body {
 button,
 input {
   line-height: 1.5;
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
 }
 
 code {
@@ -32,4 +34,18 @@ code {
 h1 {
   font-size: 1.9rem;
   font-weight: bold;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    background-color: #222;
+    color: #eee;
+    color-scheme: dark;
+  }
+  a:link {
+    color: #77e;
+  }
+  a:visited {
+    color: #e7e;
+  }
 }
