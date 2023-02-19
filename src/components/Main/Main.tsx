@@ -39,8 +39,10 @@ const profileDefault = {
 };
 
 type Connection = {
+  url: string;
   relay: NostrTools.Relay | null;
-  sub: NostrTools.Sub | null;
+  status: 'connecting' | 'connected' | 'ok' | 'failed' | 'disconnected';
+  broadcastStatus?: string;
   selected: boolean;
 };
 let connections: {
@@ -60,6 +62,7 @@ type ContactList = {
 };
 
 let profileCreatedAt = 0;
+// let currentBroadcastingId = '';
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
 
 export const Main = () => {
@@ -230,7 +233,15 @@ export const Main = () => {
     kind3sUpdate();
   };
 
-  const broadcastToRelay = (relay: NostrTools.Relay, event: NostrEvent) => {
+  const broadcastToRelay = async (
+    connection: Connection,
+    event: NostrEvent,
+  ) => {
+    if (connection.status === 'disconnected')
+      await addConnection(connection.url, true);
+    if (!connection.relay) return;
+    const { relay } = connection;
+
     const ok = () => {
       console.log('broadcasted to', relay.url);
       setStatusText(`配信済: ${relay.url}`);
@@ -238,12 +249,10 @@ export const Main = () => {
     const seen = () => {
       console.log('seen by', relay.url);
     };
-    const failed = (error: any) => {
+    const failed = (error: string) => {
+      if (error === 'event not seen after 5 seconds') return;
       console.warn('failed to broadcast to', relay.url, error);
-      if (
-        error !== 'event not seen after 5 seconds' &&
-        error !== 'blocked: pubkey not admitted'
-      ) {
+      if (error !== 'blocked: pubkey not admitted') {
         setStatusText(`配信失敗: ${relay.url} (${error})`);
       }
     };
@@ -283,11 +292,8 @@ export const Main = () => {
     console.log('startedPublish', signedEvent);
     setStatusText('送信開始…');
     for (const [url, connection] of Object.entries(connections)) {
-      if (
-        (publishMode === 'all' || contactList.relaysObj[url]) &&
-        connection.relay
-      ) {
-        broadcastToRelay(connection.relay, signedEvent);
+      if (publishMode === 'all' || contactList.relaysObj[url]) {
+        broadcastToRelay(connection, signedEvent);
       }
     }
   };
@@ -307,11 +313,8 @@ export const Main = () => {
     console.log('startedBroadcast', event);
     setStatusText('ブロードキャスト開始…');
     for (const [url, connection] of Object.entries(connections)) {
-      if (
-        (publishMode === 'all' || contactList.relaysObj[url]) &&
-        connection.relay
-      ) {
-        broadcastToRelay(connection.relay, event);
+      if (publishMode === 'all' || contactList.relaysObj[url]) {
+        broadcastToRelay(connection, event);
       }
     }
   };
@@ -337,110 +340,123 @@ export const Main = () => {
     signAndPublish({ contactList, event });
   };
 
-  const addConnection = async (url: string) => {
-    if (connections[url] || connections[url.replace(/\/$/, '')]) return;
-    console.log('connecting to', url);
+  const addConnection = async (url: string, retry?: boolean) => {
+    if (!retry && (connections[url] || connections[url.replace(/\/$/, '')]))
+      return;
     const relay = NostrTools.relayInit(url);
-    const connection: Connection = { relay: null, sub: null, selected: false };
-    connections[url] = connection;
-    await relay.connect();
-    connection.relay = relay;
-    let kind0available = false;
-    let kind3available = false;
-    const kind0Event = await relay.get({
-      authors: [login.npubHex],
-      kinds: [0],
-      limit: 1,
+    url = url.replace(/\/$/, '');
+    console.log('connecting to', url);
+    const connection: Connection =
+      retry && connections[url]
+        ? connections[url]
+        : {
+            url,
+            relay: null,
+            status: 'connecting',
+            selected: false,
+          };
+    relay.on('disconnect', () => {
+      console.log(`${url}: disconnected`);
+      if (connection.status !== 'failed') connection.status = 'disconnected';
+      connection.relay = null;
     });
-    if (
-      kind0Event &&
-      kind0Event.sig &&
-      NostrTools.validateEvent(kind0Event) &&
-      NostrTools.verifySignature({ ...kind0Event, sig: kind0Event.sig })
-    ) {
-      const event = kind0Event;
-      kind0available = true;
-      if (event.created_at > profileCreatedAt) {
-        if (profileCreatedAt === 0) {
-          setStatusText('取得できたフォローリストを表示します…');
-        }
-        profileCreatedAt = event.created_at;
-        const content = JSON.parse(event.content);
-        setProfile({
-          loaded: true,
-          createdAt: event.created_at,
-          displayName: content.display_name || '',
-          username: content.username || content.name || '',
-          about: content.about || '',
-          picture: content.picture || '',
-        });
-      }
+    connections[url] = connection;
+    try {
+      await relay.connect();
+    } catch {
+      console.warn(`${url}: failed to connect`);
+      connection.status = 'failed';
+      return;
     }
-    let kind3sUpdated = false;
-    const kind3Events = [
-      ...(await relay.list([
-        {
-          authors: [login.npubHex],
-          kinds: [3],
-          limit: 20,
-        },
-      ])),
-      ...(await relay.list([
-        {
-          authors: [login.npubHex],
-          kinds: [10002],
-          limit: 20,
-        },
-      ])),
-    ] as NostrEvent[];
-    for (const event of kind3Events) {
+    console.log(url, ': connected');
+    connection.relay = relay;
+    connection.status = 'connected';
+    if (!retry) {
+      let kind0available = false;
+      let kind3available = false;
+      const kind0Event = await relay.get({
+        authors: [login.npubHex],
+        kinds: [0],
+        limit: 1,
+      });
       if (
-        !(
-          event &&
-          event.sig &&
-          NostrTools.validateEvent(event) &&
-          NostrTools.verifySignature({ ...event, sig: event.sig })
+        kind0Event &&
+        kind0Event.sig &&
+        NostrTools.validateEvent(kind0Event) &&
+        NostrTools.verifySignature({ ...kind0Event, sig: kind0Event.sig })
+      ) {
+        const event = kind0Event;
+        kind0available = true;
+        if (event.created_at > profileCreatedAt) {
+          if (profileCreatedAt === 0) {
+            setStatusText('取得できたフォローリストを表示します…');
+          }
+          profileCreatedAt = event.created_at;
+          const content = JSON.parse(event.content);
+          setProfile({
+            loaded: true,
+            createdAt: event.created_at,
+            displayName: content.display_name || '',
+            username: content.username || content.name || '',
+            about: content.about || '',
+            picture: content.picture || '',
+          });
+        }
+      }
+      let kind3sUpdated = false;
+      const kind3Events = [
+        ...(await relay.list([
+          {
+            authors: [login.npubHex],
+            kinds: [3],
+            limit: 20,
+          },
+        ])),
+        ...(await relay.list([
+          {
+            authors: [login.npubHex],
+            kinds: [10002],
+            limit: 20,
+          },
+        ])),
+      ] as NostrEvent[];
+      for (const event of kind3Events) {
+        if (
+          !(
+            event &&
+            event.sig &&
+            NostrTools.validateEvent(event) &&
+            NostrTools.verifySignature({ ...event, sig: event.sig })
+          )
         )
-      )
-        continue;
-      const alreadyHadIndex = kind3s.findIndex(
-        kind3 =>
-          kind3.event.id === event.id &&
-          kind3.event.created_at === event.created_at,
-      );
-      if (alreadyHadIndex !== -1) {
-        const kind3 = kind3s[alreadyHadIndex];
-        if (!kind3.eventFrom.includes(url)) {
-          kind3.eventFrom.push(url);
+          continue;
+        const alreadyHadIndex = kind3s.findIndex(
+          kind3 =>
+            kind3.event.id === event.id &&
+            kind3.event.created_at === event.created_at,
+        );
+        if (alreadyHadIndex !== -1) {
+          const kind3 = kind3s[alreadyHadIndex];
+          if (!kind3.eventFrom.includes(url)) {
+            kind3.eventFrom.push(url);
+            kind3sUpdated = true;
+          }
+        } else {
+          kind3s.push({ eventFrom: [url], event });
           kind3sUpdated = true;
         }
-      } else {
-        kind3s.push({ eventFrom: [url], event });
-        kind3sUpdated = true;
+        if (event.kind === 3) kind3available = true;
       }
-      if (event.kind === 3) kind3available = true;
+      if (kind3sUpdated) {
+        kind3sUpdate();
+      }
+      console.log(
+        `${url}: ok. k0(profile)=${
+          kind0available ? 'found' : 'no'
+        }, k3(contacts)=${kind3available ? 'found' : 'no'}`,
+      );
     }
-    if (kind3sUpdated) {
-      kind3sUpdate();
-    }
-    /*
-    const sub = relay.sub([
-      {
-        authors: [login.npubHex],
-        kinds: [10002],
-        limit: 10,
-        // until: 1_676_300_000, //((Date.now() / 1000) | 0) - 10000,
-      },
-    ]);
-    sub.on('event', (event: NostrTools.Event) => {
-      console.log(url, event);
-    });
-    sub.on('eose', () => {
-      console.log(`${url}: ok. k0=${kind0available}, k3=${kind3available}`);
-      sub.unsub();
-      connection.sub = null;
-    }); */
-    console.log(`${url}: ok. k0=${kind0available}, k3=${kind3available}`);
+    connection.status = 'ok';
   };
   const initConnect = async () => {
     setStatusText('プロフィールを探しています…');
@@ -496,8 +512,7 @@ export const Main = () => {
               onClick={() => {
                 if (confirm('ログアウトしますか？')) {
                   for (const [url, connection] of Object.entries(connections)) {
-                    const { relay, sub } = connection;
-                    if (sub) sub.unsub();
+                    const { relay } = connection;
                     if (relay) relay.close();
                     console.log(`${url}: closed`);
                   }
@@ -509,8 +524,7 @@ export const Main = () => {
             <button
               onClick={() => {
                 for (const [url, connection] of Object.entries(connections)) {
-                  const { relay, sub } = connection;
-                  if (sub) sub.unsub();
+                  const { relay } = connection;
                   if (relay) relay.close();
                   console.log(`${url}: closed`);
                 }
