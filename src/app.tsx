@@ -59,6 +59,16 @@ export const App = () => {
         リレーとの通信状況が常に変動するため、リロードで結果が増減することがあります。
       </p>
       <p>
+        追加説明:{' '}
+        <a
+          href="https://scrapbox.io/nostr/NostrFlu%E3%81%AE%E7%B4%B0%E3%81%8B%E3%81%84%E4%BB%95%E6%A7%98%E3%81%AA%E3%81%A9"
+          target={login.npubHex ? '_blank' : undefined}
+          rel="noreferrer noopener">
+          NostrFluの細かい仕様など
+        </a>{' '}
+        (Scrapbox: nostr)
+      </p>
+      <p>
         GitHub:{' '}
         <a
           href="https://github.com/heguro/nostr-following-list-util"
