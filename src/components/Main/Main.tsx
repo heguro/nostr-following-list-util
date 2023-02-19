@@ -127,7 +127,22 @@ export const Main = () => {
   const loadBackupFile = (text: string, name: string) => {
     const lines = text.split(/\r\n|\r|\n/).filter(s => s !== '');
     const headers = lines.filter(s => s.startsWith('#'));
-    const contactHexes = lines.filter(s => !s.startsWith('#'));
+    const contactHexes = lines
+      .filter(s => !s.startsWith('#'))
+      .map(s => s.replace(/\s*#.*$/g, ''))
+      .map(s => {
+        if (/^npub/.test(s)) {
+          try {
+            const { type, data } = NostrTools.nip19.decode(s);
+            return type === 'npub' && typeof data === 'string' ? data : '';
+          } catch (e) {
+            console.warn(e);
+            return '';
+          }
+        }
+        return s;
+      })
+      .filter(s => s !== '');
     const relaysLine = headers.find(s => s.startsWith('# relays: '));
     const pubkeyLine = headers.find(s => s.startsWith('# pubkey: '));
     const pubkey = pubkeyLine ? pubkeyLine.replace('# pubkey: ', '') : '';
