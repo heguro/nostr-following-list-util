@@ -64,12 +64,14 @@ type ContactList = {
 let profileCreatedAt = 0;
 // let currentBroadcastingId = '';
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
+let followers: string[] = [];
 
 export const Main = () => {
   const [profile, setProfile] = useState(profileDefault);
   const [contactLists, setContactLists] = useState<ContactList[]>([]);
   const [latestGotKind3Time, setLatestGotKind3Time] = useState(0);
   const [statusText, setStatusText] = useState('');
+  const [followerHexes, setFollowerHexes] = useState<string[]>([]);
   const [publishMode, setPublishMode] = useState<'registered' | 'all'>(
     'registered',
   );
@@ -470,6 +472,32 @@ export const Main = () => {
           kind0available ? 'found' : 'no'
         }, k3(contacts)=${kind3available ? 'found' : 'no'}`,
       );
+      // test followers
+      const followerEvents = [
+        ...(await relay.list([
+          {
+            kinds: [3],
+            '#p': [login.npubHex],
+            limit: 300,
+          },
+        ])),
+      ] as NostrEvent[];
+      for (const event of followerEvents) {
+        if (
+          !(
+            event &&
+            event.sig &&
+            NostrTools.validateEvent(event) &&
+            NostrTools.verifySignature({ ...event, sig: event.sig })
+          )
+        )
+          continue;
+        if (!followers.includes(event.pubkey)) {
+          followers.push(event.pubkey);
+          setFollowerHexes([...followers]);
+        }
+        if (event.kind === 3) kind3available = true;
+      }
     }
     connection.status = 'ok';
   };
@@ -481,6 +509,7 @@ export const Main = () => {
     });
     connections = {};
     kind3s = [];
+    followers = [];
     profileCreatedAt = 0;
     relays.forEach(url => {
       addConnection(url);
@@ -623,7 +652,7 @@ export const Main = () => {
                 .join(', ')}
             </div>
             <div class="event-actions">
-              {writable && contactList.event.kind === 3 && (
+              {(true || (writable && contactList.event.kind === 3)) && (
                 <>
                   <button
                     onClick={() => {
@@ -704,6 +733,14 @@ export const Main = () => {
             <hr />
           </div>
         ))}
+      </div>
+      <div class="temp followers">
+        <p>followers count: {followerHexes.length}</p>
+        <ul>
+          {followerHexes.map(follower => (
+            <li key={follower}>{follower}</li>
+          ))}
+        </ul>
       </div>
     </div>
   );
