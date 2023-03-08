@@ -2,6 +2,7 @@ import { createContext } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { Nip07Nostr, Nip07Relays } from './@types/nip07';
 import './app.css';
+import { BadgesMain } from './components/BadgesMain/BadgesMain';
 import { Login } from './components/Login/Login';
 import { Main } from './components/Main/Main';
 
@@ -21,12 +22,14 @@ interface LoginProps {
   npubHex: string;
   nsecHex: string;
   relays?: Nip07Relays;
+  mode: 'main' | 'badgesMain';
 }
 
 const loginDefault: LoginProps = {
   type: 'npub',
   npubHex: '',
   nsecHex: '',
+  mode: 'main',
 };
 
 export const LoginContext = createContext<LoginContextProps>({
@@ -42,11 +45,17 @@ export const App = () => {
   return (
     <LoginContext.Provider value={loginContextValue}>
       <h1>NostrFlu</h1>
-      <p>
-        Nostr Following List Util: Nostrのフォローリストを集めたり再送信するやつ
-      </p>
+      {login.npubHex && login.mode === 'badgesMain' ? (
+        <p>(バッジモード)</p>
+      ) : (
+        <p>
+          Nostr Following List Util:
+          Nostrのフォローリストを集めたり再送信するやつ
+        </p>
+      )}
       {!login.npubHex && <Login />}
-      {login.npubHex && <Main />}
+      {login.npubHex && login.mode === 'main' && <Main />}
+      {login.npubHex && login.mode === 'badgesMain' && <BadgesMain />}
       <p>
         公開鍵でログインした場合、フォローリストの取得・確認のみ可能です。
         <br />

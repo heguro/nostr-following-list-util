@@ -14,6 +14,7 @@ export const Login = () => {
   const [loginStatus, setLoginStatus] = useState<'' | 'loading' | 'success'>(
     '',
   );
+  const [loginMode, setLoginMode] = useState<'main' | 'badgesMain'>('main');
   const [nip07Available, setNip07Available] = useState(false);
 
   useEffect(() => {
@@ -34,7 +35,33 @@ export const Login = () => {
     <div id="sign-in-area">
       <h2>ログイン</h2>
       <div>
+        <form
+          onSubmit={event => event.preventDefault()}
+          id="login-mode-selector">
+          <span>Mode:</span>
+          <label>
+            <input
+              type="radio"
+              name="login-mode-input"
+              value="main"
+              onChange={() => setLoginMode('main')}
+              checked={loginMode === 'main'}
+            />
+            <span>See following lists (Default) [フォローを見る]</span>
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="login-mode-input"
+              value="main"
+              onChange={() => setLoginMode('badgesMain')}
+              checked={loginMode === 'badgesMain'}
+            />
+            <span>See badges [バッジを見る]</span>
+          </label>
+        </form>
         <button
+          type="button"
           disabled={!!loginStatus || !nip07Available}
           onClick={() => {
             (async () => {
@@ -49,6 +76,7 @@ export const Login = () => {
                   npubHex,
                   nsecHex: '',
                   relays,
+                  mode: loginMode,
                 });
                 setLoginStatus('success');
               }
@@ -81,11 +109,13 @@ export const Login = () => {
                       type,
                       npubHex: data,
                       nsecHex: '',
+                      mode: loginMode,
                     }
                   : {
                       type,
                       npubHex: NostrTools.getPublicKey(data),
                       nsecHex: data,
+                      mode: loginMode,
                     },
               );
               setLoginKeyInput('');

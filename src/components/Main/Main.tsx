@@ -2,12 +2,16 @@ import { useContext, useEffect, useState } from 'preact/hooks';
 import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
 import { NostrEvent } from '../../@types/nostrTools';
 import { LoginContext } from '../../app';
-import * as NostrTools from '../../lib/nostrTools';
 import {
-  jsonParseOrEmptyObject,
-  msecToDateString,
-  secToDateString,
-} from '../../lib/util';
+  Connection,
+  ContactList,
+  contactListToKind3Event,
+  kind3ToContactList,
+  Profile,
+  profileDefault,
+} from '../../lib/kinds';
+import * as NostrTools from '../../lib/nostrTools';
+import { msecToDateString, secToDateString } from '../../lib/util';
 import './Main.css';
 
 declare global {
@@ -29,44 +33,16 @@ const relayDefaults: Nip07Relays = {
   'wss://nostr.oxtr.dev': { read: true, write: true },
 };
 
-const profileDefault = {
-  loaded: false,
-  createdAt: 0,
-  displayName: '',
-  username: '',
-  about: '',
-  picture: '',
-};
-
-type Connection = {
-  url: string;
-  relay: NostrTools.Relay | null;
-  status: 'connecting' | 'connected' | 'ok' | 'failed' | 'disconnected';
-  broadcastStatus?: string;
-  selected: boolean;
-};
 let connections: {
   [url: string]: Connection;
 } = {};
-
-type ContactList = {
-  id: string;
-  type: 'contacts' | 'relays';
-  createdAt: number;
-  contacts: string[];
-  relays: string[];
-  relaysObj: Nip07Relays;
-  eventFrom: string[];
-  event: NostrEvent;
-  selected: boolean;
-};
 
 let profileCreatedAt = 0;
 // let currentBroadcastingId = '';
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
 
 export const Main = () => {
-  const [profile, setProfile] = useState(profileDefault);
+  const [profile, setProfile] = useState<Profile>(profileDefault);
   const [contactLists, setContactLists] = useState<ContactList[]>([]);
   const [latestGotKind3Time, setLatestGotKind3Time] = useState(0);
   const [statusText, setStatusText] = useState('');
@@ -80,36 +56,7 @@ export const Main = () => {
 
   const kind3sUpdate = () => {
     kind3s.sort((a, b) => b.event.created_at - a.event.created_at);
-    const newContactLists: typeof contactLists = kind3s.map(
-      ({ event, eventFrom }) =>
-        event.kind === 10002
-          ? {
-              id: event.id || '',
-              type: 'relays',
-              createdAt: event.created_at,
-              contacts: event.tags
-                .filter(tag => tag[0] === 'p')
-                .map(tag => tag[1]),
-              relays: Object.keys(jsonParseOrEmptyObject(event.content)),
-              relaysObj: jsonParseOrEmptyObject(event.content),
-              eventFrom,
-              event,
-              selected: false,
-            }
-          : {
-              id: event.id || '',
-              type: 'contacts',
-              createdAt: event.created_at,
-              contacts: event.tags
-                .filter(tag => tag[0] === 'p')
-                .map(tag => tag[1]),
-              relays: Object.keys(jsonParseOrEmptyObject(event.content)),
-              relaysObj: jsonParseOrEmptyObject(event.content),
-              eventFrom,
-              event,
-              selected: false,
-            },
-    );
+    const newContactLists = kind3s.map(kind3ToContactList);
     setContactLists(newContactLists);
     setLatestGotKind3Time(
       kind3s.find(({ event }) => event.sig && event.kind === 3)?.event
@@ -314,13 +261,10 @@ export const Main = () => {
   };
 
   const startPublishNewKind3 = async (contactList: ContactList) => {
-    const event: NostrEvent = {
-      ...contactList.event,
-      created_at: (Date.now() / 1000) | 0,
-      id: undefined,
-      sig: undefined,
-    };
-    signAndPublish({ contactList, event });
+    signAndPublish({
+      contactList,
+      event: contactListToKind3Event(contactList),
+    });
   };
 
   const startBroadcast = (contactList: ContactList) => {
@@ -394,12 +338,7 @@ export const Main = () => {
         kinds: [0],
         limit: 1,
       });
-      if (
-        kind0Event &&
-        kind0Event.sig &&
-        NostrTools.validateEvent(kind0Event) &&
-        NostrTools.verifySignature({ ...kind0Event, sig: kind0Event.sig })
-      ) {
+      if (kind0Event) {
         const event = kind0Event;
         kind0available = true;
         if (event.created_at > profileCreatedAt) {
@@ -410,6 +349,7 @@ export const Main = () => {
           const content = JSON.parse(event.content);
           setProfile({
             loaded: true,
+            id: event.id || '',
             createdAt: event.created_at,
             displayName: content.display_name || '',
             username: content.username || content.name || '',
