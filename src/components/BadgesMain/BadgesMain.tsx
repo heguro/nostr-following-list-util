@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'preact/hooks';
 import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
 import { NostrEvent } from '../../@types/nostrTools';
 import { LoginContext } from '../../app';
+import { t } from '../../lib/i18n';
 import {
   AcceptedBadge,
   BadgeAward,
@@ -224,7 +225,7 @@ export const BadgesMain = () => {
 
     const ok = () => {
       console.log('broadcasted to', relay.url);
-      setStatusText(`配信済: ${relay.url}`);
+      setStatusText(`${t('info.broadcast.ok')}: ${relay.url}`);
     };
     const seen = () => {
       console.log('seen by', relay.url);
@@ -233,7 +234,7 @@ export const BadgesMain = () => {
       if (error === 'event not seen after 5 seconds') return;
       console.warn('failed to broadcast to', relay.url, error);
       if (error !== 'blocked: pubkey not admitted') {
-        setStatusText(`配信失敗: ${relay.url} (${error})`);
+        setStatusText(`${t('info.broadcast.fail')}: ${relay.url} (${error})`);
       }
     };
     const pub = relay.publish(event);
@@ -244,7 +245,7 @@ export const BadgesMain = () => {
   };
 
   const signAndPublish = async ({ event }: { event: NostrEvent }) => {
-    setStatusText('署名中…');
+    setStatusText(t('info.sign.ing'));
     event.id = NostrTools.getEventHash(event);
     let signedEvent: NostrEvent | undefined;
     try {
@@ -256,7 +257,7 @@ export const BadgesMain = () => {
           : undefined;
     } catch (e) {
       console.error(e);
-      setStatusText(`署名失敗`);
+      setStatusText(t('info.sign.fail'));
       return;
     }
     if (!signedEvent) {
@@ -264,7 +265,7 @@ export const BadgesMain = () => {
       return;
     }
     console.log('startedPublish', signedEvent);
-    setStatusText('送信開始…');
+    setStatusText(t('info.publish.start'));
     const contactList = contactLists[0];
     for (const [url, connection] of Object.entries(connections)) {
       if (publishMode === 'all' || contactList.relaysObj[url]) {
@@ -335,7 +336,7 @@ export const BadgesMain = () => {
 
   const startBroadcast = (event: NostrEvent) => {
     console.log('startedBroadcast', event);
-    setStatusText('ブロードキャスト開始…');
+    setStatusText(t('info.broadcast.start'));
     const contactList = contactLists[0];
     for (const [url, connection] of Object.entries(connections)) {
       if (publishMode === 'all' || contactList.relaysObj[url]) {
@@ -388,7 +389,7 @@ export const BadgesMain = () => {
         kind0available = true;
         if (event.created_at > profileCreatedAt) {
           if (profileCreatedAt === 0) {
-            setStatusText('取得できたバッジリストを表示します…');
+            setStatusText(t('info.showingBadges'));
           }
           profileCreatedAt = event.created_at;
           const content = jsonParseOrEmptyArray(event.content);
@@ -617,7 +618,7 @@ export const BadgesMain = () => {
     connection.status = 'ok';
   };
   const initConnect = async (reload = false) => {
-    setStatusText('プロフィールを探しています…');
+    setStatusText(t('info.findindProfiles'));
     const relays = Object.keys({
       ...(login.relays || {}),
       ...relayDefaults,
@@ -651,7 +652,7 @@ export const BadgesMain = () => {
         </div>
         <div class="your-names">
           {!profile.loaded ? (
-            <span class="profile-loading">(Loading)</span>
+            <span class="profile-loading">({t('text.loading')})</span>
           ) : (
             <>
               <span class="your-display-name">
@@ -669,11 +670,17 @@ export const BadgesMain = () => {
             Hex: <code class="npub-hex">{login.npubHex}</code>
           </div>
           <div>
-            {{ nip07: 'NIP-07', npub: '公開鍵', nsec: '秘密鍵' }[login.type]}
-            でログイン{' '}
+            {t(
+              'info.loggedInWith',
+              {
+                nip07: 'NIP-07',
+                npub: t('text.publicKey'),
+                nsec: t('text.privateKey'),
+              }[login.type],
+            )}{' '}
             <button
               onClick={() => {
-                if (confirm('ログアウトしますか？')) {
+                if (confirm(t('action.logout.confirm'))) {
                   for (const [url, connection] of Object.entries(connections)) {
                     const { relay } = connection;
                     if (relay) relay.close();
@@ -682,7 +689,7 @@ export const BadgesMain = () => {
                   setLogin({ ...login, npubHex: '', nsecHex: '' });
                 }
               }}>
-              ログアウト
+              {t('text.logout')}
             </button>
             <button
               onClick={async () => {
@@ -695,7 +702,7 @@ export const BadgesMain = () => {
                 setProfile(profileDefault);
                 initConnect(true);
               }}>
-              リロード (再接続)
+              {t('action.reload')}
             </button>
           </div>
         </div>
@@ -705,7 +712,10 @@ export const BadgesMain = () => {
       </div>
       <div class="events-actions">
         <div>
-          (設定) <label for="publish-mode-select">送信先リレー: </label>
+          ({t('setting.label')}){' '}
+          <label for="publish-mode-select">
+            {t('setting.publishMode.label')}:{' '}
+          </label>
           <select
             id="publish-mode-select"
             value={publishMode}
@@ -717,35 +727,29 @@ export const BadgesMain = () => {
                 setPublishMode(target.value);
               }
             }}>
-            <option value="registered">登録済リレー</option>
-            <option value="all">できるだけ多くのリレー</option>
+            <option value="registered">
+              {t('setting.publishMode.registered')}
+            </option>
+            <option value="all">{t('setting.publishMode.all')}</option>
           </select>
         </div>
         <button
           onClick={() => {
             const selected = awardedBadges.filter(badge => badge.selected);
-            if (
-              !confirm(
-                `＋ 選択した${selected.length}個のバッジをAcceptしますか？`,
-              )
-            )
+            if (!confirm(t('badges.selected.accept.confirm', selected.length)))
               return;
             addAndPublishNewAcceptedBadges(selected);
           }}>
-          ＋ 選択したバッジをAccept
+          {t('badges.selected.accept.button')}
         </button>
         <button
           onClick={() => {
             const selected = awardedBadges.filter(badge => badge.selected);
-            if (
-              !confirm(
-                `× 選択した${selected.length}個のバッジをDeclineしますか？`,
-              )
-            )
+            if (!confirm(t('badges.selected.decline.confirm', selected.length)))
               return;
             removeAndPublishNewAcceptedBadges(selected);
           }}>
-          × 選択したバッジをDecline
+          {t('badges.selected.decline.button')}
         </button>
       </div>
       <hr />

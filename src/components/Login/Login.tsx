@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { Nip07Nostr } from '../../@types/nip07';
 import { LoginContext } from '../../app';
+import { t } from '../../lib/i18n';
 import * as NostrTools from '../../lib/nostrTools';
 import './Login.css';
 
@@ -33,7 +34,7 @@ export const Login = () => {
 
   return (
     <div id="sign-in-area">
-      <h2>ログイン</h2>
+      <h2>{t('text.login')}</h2>
       <div>
         <form
           onSubmit={event => event.preventDefault()}
@@ -47,7 +48,7 @@ export const Login = () => {
               onChange={() => setLoginMode('main')}
               checked={loginMode === 'main'}
             />
-            <span>See following lists (Default) [フォローを見る]</span>
+            <span>{t('login.mode.followees')}</span>
           </label>
           <label>
             <input
@@ -57,7 +58,7 @@ export const Login = () => {
               onChange={() => setLoginMode('badgesMain')}
               checked={loginMode === 'badgesMain'}
             />
-            <span>See badges [バッジを見る]</span>
+            <span>{t('login.mode.badges')}</span>
           </label>
         </form>
         <button
@@ -85,8 +86,8 @@ export const Login = () => {
               setLoginStatus('');
             });
           }}>
-          NIP-07でログイン (推奨)
-          {nip07Available ? '' : ' - 拡張機能がみつかりません'}
+          {t('action.loginWith', 'NIP-07')} {t('text.recommended')}
+          {nip07Available ? '' : ` - ${t('info.nip07.unavailable')}`}
         </button>
       </div>
       <div>
@@ -137,12 +138,14 @@ export const Login = () => {
             value={loginKeyInput}
           />
           <button disabled={!!loginStatus} type="submit">
-            {/^npub/.test(loginKeyInput)
-              ? '公開鍵'
-              : /^nsec/.test(loginKeyInput)
-              ? '秘密鍵'
-              : '秘密鍵/公開鍵'}
-            でログイン
+            {t(
+              'action.loginWith',
+              /^npub/.test(loginKeyInput)
+                ? t('text.publicKey')
+                : /^nsec/.test(loginKeyInput)
+                ? t('text.publicKey')
+                : `${t('text.privateKey')}/${t('text.publicKey')}`,
+            )}
           </button>
         </form>
       </div>

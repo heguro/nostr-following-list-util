@@ -6,16 +6,8 @@
 }
 
 #login-mode-selector {
-  display: flex;
-  flex-direction: row;
   margin: 0.1rem 0 0.5rem;
-  width: max-content;
 }
-
-#login-mode-selector > * {
-  margin-right: 0.5rem;
-}
-
 #login-mode-selector > label {
-  display: inline-block;
+  display: block;
 }

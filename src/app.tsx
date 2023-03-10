@@ -5,6 +5,7 @@ import './app.css';
 import { BadgesMain } from './components/BadgesMain/BadgesMain';
 import { Login } from './components/Login/Login';
 import { Main } from './components/Main/Main';
+import { t } from './lib/i18n';
 
 declare global {
   var nostr: Nip07Nostr | undefined;
@@ -46,36 +47,29 @@ export const App = () => {
     <LoginContext.Provider value={loginContextValue}>
       <h1>NostrFlu</h1>
       {login.npubHex && login.mode === 'badgesMain' ? (
-        <p>(バッジモード)</p>
+        <p>({t('info.mode.badges')})</p>
       ) : (
-        <p>
-          Nostr Following List Util:
-          Nostrのフォローリストを集めたり再送信するやつ
-        </p>
+        <p>{t('desc.subtitle')}</p>
       )}
       {!login.npubHex && <Login />}
       {login.npubHex && login.mode === 'main' && <Main />}
       {login.npubHex && login.mode === 'badgesMain' && <BadgesMain />}
       <p>
-        公開鍵でログインした場合、フォローリストの取得・確認のみ可能です。
+        {t('footer.text.1')}
         <br />
-        秘密鍵またはNIP-07でログインした場合、フォローリストの取得・確認と再送信が可能です。
+        {t('footer.text.2')}
       </p>
+      <p>{t('footer.text.3')}</p>
+      <p>{t('footer.text.4')}</p>
       <p>
-        入力された秘密鍵はどこにも送信されず、ブラウザーのメモリ内にのみ保持されます。
-      </p>
-      <p>
-        リレーとの通信状況が常に変動するため、リロードで結果が増減することがあります。
-      </p>
-      <p>
-        追加説明:{' '}
+        {t('footer.additional.title')}:{' '}
         <a
-          href="https://scrapbox.io/nostr/NostrFlu%E3%81%AE%E7%B4%B0%E3%81%8B%E3%81%84%E4%BB%95%E6%A7%98%E3%81%AA%E3%81%A9"
+          href="https://scrapbox-reader.vercel.app/nostr/NostrFlu%E3%81%AE%E7%B4%B0%E3%81%8B%E3%81%84%E4%BB%95%E6%A7%98%E3%81%AA%E3%81%A9"
           target={login.npubHex ? '_blank' : undefined}
           rel="noreferrer noopener">
-          NostrFluの細かい仕様など
+          {t('footer.additional.link')}
         </a>{' '}
-        (Scrapbox: nostr)
+        (Scrapbox)
       </p>
       <p>
         GitHub:{' '}
