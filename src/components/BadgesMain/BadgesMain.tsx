@@ -506,11 +506,21 @@ export const BadgesMain = () => {
           {
             kinds: [30009],
             authors: keys
-              .map(key => splitKind30009Id(key).kind30009Pubkey)
-              .filter(d => d !== undefined),
+              .map(key => splitKind30009Id(key))
+              .filter(d => !!d?.kind30009D)
+              .map(d => d.kind30009Pubkey),
             '#d': keys
-              .map(key => splitKind30009Id(key).kind30009D)
-              .filter(d => d !== undefined),
+              .map(key => splitKind30009Id(key))
+              .filter(d => !!d?.kind30009D)
+              .map(d => d.kind30009D),
+            limit: 1000,
+          },
+          {
+            kinds: [30009],
+            authors: keys
+              .map(key => splitKind30009Id(key))
+              .filter(d => d?.kind30009D === '')
+              .map(d => d.kind30009Pubkey),
             limit: 1000,
           },
           {
