@@ -853,6 +853,7 @@ export const BadgesMain = () => {
                       Broadcast badgeInfo(30009)
                     </button>
                   </div>
+                  <div>id: {badge.kind30009D || ''}</div>
                   <div>
                     awarded(8):{' '}
                     {badge.eventFrom
