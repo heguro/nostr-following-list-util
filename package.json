@@ -11,7 +11,7 @@
     "lint-fix": "eslint --cache --fix --ext .js,.jsx,.ts,.tsx src && prettier --write src"
   },
   "dependencies": {
-    "nostr-tools": "^1.4.1",
+    "nostr-tools": "1.4.1",
     "preact": "^10.11.3"
   },
   "devDependencies": {
