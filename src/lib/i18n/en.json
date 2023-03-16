@@ -14,6 +14,7 @@
   "action.selected.combine": "Combine selected following lists",
   "action.send.broadcast.button": "Broadcast",
   "action.send.broadcast.confirm": "Followees count: {0}, Relay connection count: {1}. This data will be distributed (broadcasted) to {2} relays. Once an operation has been performed, it is very likely that it cannot be undone, and we recommend that you back up in advance. Are you sure you want to do this?",
+  "action.send.kind10002.basedOnKind3": "Send new kind10002 based on latest kind3",
   "action.send.overwrite.button": "Send (Overwrite)",
   "action.send.overwrite.confirm": "Followees count: {0}, Relay connection count: {1}. This data will be distributed (and overwrites) to {2} relays. Once an operation has been performed, it is very likely that it cannot be undone, and we recommend that you back up in advance. Are you sure you want to do this?",
   "badges.selected.accept.button": "＋ Accept selected badges",

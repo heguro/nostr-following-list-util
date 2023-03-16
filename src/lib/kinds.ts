@@ -89,9 +89,16 @@ export const kind3ToContactList = (params: {
           id: event.id || '',
           type: 'relays',
           createdAt: event.created_at,
-          contacts: event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]),
-          relays: Object.keys(jsonParseOrEmptyObject(event.content)),
-          relaysObj: jsonParseOrEmptyObject(event.content),
+          contacts: [],
+          relays: event.tags.filter(tag => tag[0] === 'r').map(tag => tag[1]),
+          relaysObj: Object.fromEntries(
+            event.tags
+              .filter(tag => tag[0] === 'r')
+              .map(tag => [
+                tag[1],
+                { read: tag[2] !== 'write', write: tag[2] !== 'read' },
+              ]),
+          ),
           eventFrom,
           event,
           selected: false,
@@ -116,5 +123,21 @@ export const contactListToKind3Event = (contactList: ContactList) => {
     created_at: (Date.now() / 1000) | 0,
     id: undefined,
     sig: undefined,
+  } as NostrEvent;
+};
+
+export const contactListToKind10002Event = (contactList: ContactList) => {
+  return {
+    kind: 10002,
+    pubkey: contactList.event.pubkey,
+    content: '',
+    created_at: (Date.now() / 1000) | 0,
+    id: undefined,
+    sig: undefined,
+    tags: Object.entries(contactList.relaysObj).map(([url, rw]) => [
+      'r',
+      url,
+      ...(rw.read && rw.write ? [] : rw.read ? ['read'] : ['write']),
+    ]),
   } as NostrEvent;
 };

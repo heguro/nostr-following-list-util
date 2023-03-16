@@ -6,6 +6,7 @@ import { t } from '../../lib/i18n';
 import {
   Connection,
   ContactList,
+  contactListToKind10002Event,
   contactListToKind3Event,
   kind3ToContactList,
   Profile,
@@ -46,6 +47,7 @@ export const Main = () => {
   const [profile, setProfile] = useState<Profile>(profileDefault);
   const [contactLists, setContactLists] = useState<ContactList[]>([]);
   const [latestGotKind3Time, setLatestGotKind3Time] = useState(0);
+  const [latestGotKind10002Time, setLatestGotKind10002Time] = useState(0);
   const [statusText, setStatusText] = useState('');
   const [publishMode, setPublishMode] = useState<'registered' | 'all'>(
     'registered',
@@ -61,6 +63,10 @@ export const Main = () => {
     setContactLists(newContactLists);
     setLatestGotKind3Time(
       kind3s.find(({ event }) => event.sig && event.kind === 3)?.event
+        .created_at || 0,
+    );
+    setLatestGotKind10002Time(
+      kind3s.find(({ event }) => event.sig && event.kind === 10002)?.event
         .created_at || 0,
     );
     const newRelays = newContactLists.flatMap(
@@ -260,6 +266,13 @@ export const Main = () => {
     signAndPublish({
       contactList,
       event: contactListToKind3Event(contactList),
+    });
+  };
+
+  const startPublishNewKind10002 = async (contactList: ContactList) => {
+    signAndPublish({
+      contactList,
+      event: contactListToKind10002Event(contactList),
     });
   };
 
@@ -491,6 +504,18 @@ export const Main = () => {
               }}>
               {t('action.reload')}
             </button>
+            {writable && (
+              <button
+                disabled={!contactLists.some(c => c.event.kind === 3)}
+                onClick={() => {
+                  const contactList = contactLists.find(
+                    c => c.event.kind === 3,
+                  );
+                  if (contactList) startPublishNewKind10002(contactList);
+                }}>
+                {t('action.send.kind10002.basedOnKind3')}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -550,9 +575,13 @@ export const Main = () => {
                   : '<new>'}
               </label>
             </div>
-            {contactList.type === 'contacts' && (
+            {contactList.type === 'contacts' ? (
               <div class="event-contact-count">
                 Followings count: {contactList.contacts.length}
+              </div>
+            ) : (
+              <div class="event-relays-info">
+                (Kind 10002: Relays infomation event)
               </div>
             )}
             <div class="event-relays">
@@ -572,33 +601,37 @@ export const Main = () => {
                 .join(', ')}
             </div>
             <div class="event-actions">
-              {writable && contactList.event.kind === 3 && (
+              {writable && (
                 <>
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          t(
-                            'action.send.overwrite.confirm',
-                            contactList.contacts.length,
-                            contactList.relays.length,
-                            (publishMode === 'registered' &&
-                              contactList.relays.length) ||
-                              Object.keys(connections).length,
-                          ),
-                        )
-                      ) {
-                        startPublishNewKind3(contactList);
-                      }
-                    }}>
-                    {t('action.send.overwrite.button')}
-                  </button>
-                  {contactList.event.kind === 3 &&
-                    contactList.createdAt === latestGotKind3Time && (
-                      <>
+                  {contactList.event.kind === 3 && (
+                    <button
+                      onClick={() => {
+                        if (
+                          confirm(
+                            t(
+                              'action.send.overwrite.confirm',
+                              contactList.contacts.length,
+                              contactList.relays.length,
+                              (publishMode === 'registered' &&
+                                contactList.relays.length) ||
+                                Object.keys(connections).length,
+                            ),
+                          )
+                        ) {
+                          startPublishNewKind3(contactList);
+                        }
+                      }}>
+                      {t('action.send.overwrite.button')}
+                    </button>
+                  )}
+                  {(contactList.event.kind === 3 &&
+                    contactList.createdAt === latestGotKind3Time) ||
+                    (contactList.event.kind === 10002 &&
+                      contactList.createdAt === latestGotKind10002Time && (
                         <button
                           onClick={() => {
                             if (
+                              contactList.event.kind === 10002 ||
                               confirm(
                                 t(
                                   'action.send.broadcast.confirm',
@@ -615,32 +648,33 @@ export const Main = () => {
                           }}>
                           {t('action.send.broadcast.button')}
                         </button>
-                        <button
-                          onClick={() => {
-                            const unfollow = contactList.contacts.includes(
-                              login.npubHex,
-                            );
-                            const followCount =
-                              contactList.contacts.length + (unfollow ? -1 : 1);
-                            if (
-                              confirm(
-                                t(
-                                  unfollow
-                                    ? 'action.myself.unfollow.confirm'
-                                    : 'action.myself.follow.confirm',
-                                  followCount,
-                                ),
-                              )
-                            ) {
-                              startFollowMyself({ contactList, unfollow });
-                            }
-                          }}>
-                          {contactList.contacts.includes(login.npubHex)
-                            ? t('action.myself.unfollow.button')
-                            : t('action.myself.follow.button')}
-                        </button>
-                      </>
-                    )}
+                      ))}
+                  {contactList.event.kind === 3 && (
+                    <button
+                      onClick={() => {
+                        const unfollow = contactList.contacts.includes(
+                          login.npubHex,
+                        );
+                        const followCount =
+                          contactList.contacts.length + (unfollow ? -1 : 1);
+                        if (
+                          confirm(
+                            t(
+                              unfollow
+                                ? 'action.myself.unfollow.confirm'
+                                : 'action.myself.follow.confirm',
+                              followCount,
+                            ),
+                          )
+                        ) {
+                          startFollowMyself({ contactList, unfollow });
+                        }
+                      }}>
+                      {contactList.contacts.includes(login.npubHex)
+                        ? t('action.myself.unfollow.button')
+                        : t('action.myself.follow.button')}
+                    </button>
+                  )}
                 </>
               )}
               <button

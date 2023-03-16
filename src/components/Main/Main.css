@@ -52,6 +52,9 @@
 .connection-status {
   min-height: 1.5rem;
 }
+.event-relays-info {
+  opacity: 0.6;
+}
 .event-relays-list {
   font-size: 0.8rem;
   word-break: break-all;

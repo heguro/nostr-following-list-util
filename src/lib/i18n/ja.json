@@ -13,6 +13,7 @@
   "action.selected.combine": "選択したリストを結合",
   "action.send.broadcast.button": "ブロードキャスト (再配信)",
   "action.send.broadcast.confirm": "フォロー数{0}、リレー接続数{1}のデータが{2}件のリレーに反映（ブロードキャスト）されます。 一度行った操作は元に戻せない可能性が非常に高く、事前のバックアップをおすすめします。 よろしいですか？",
+  "action.send.kind10002.basedOnKind3": "最新のkind3に基づいたkind10002を送信",
   "action.send.overwrite.button": "上書き送信",
   "action.send.overwrite.confirm": "フォロー数{0}、リレー接続数{1}のデータが{2}件のリレーに反映（上書き）されます。 一度行った操作は元に戻せない可能性が非常に高く、事前のバックアップをおすすめします。 よろしいですか？",
   "badges.selected.accept.button": "＋ 選択したバッジをAccept",
