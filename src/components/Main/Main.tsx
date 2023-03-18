@@ -13,7 +13,11 @@ import {
   profileDefault,
 } from '../../lib/kinds';
 import * as NostrTools from '../../lib/nostrTools';
-import { msecToDateString, secToDateString } from '../../lib/util';
+import {
+  msecToDateString,
+  relayUrlNormarize,
+  secToDateString,
+} from '../../lib/util';
 import './Main.css';
 
 declare global {
@@ -69,12 +73,11 @@ export const Main = () => {
       kind3s.find(({ event }) => event.sig && event.kind === 10002)?.event
         .created_at || 0,
     );
-    const newRelays = newContactLists.flatMap(
-      contactList => contactList.relays,
+    const newRelaysNormarized = newContactLists.flatMap(
+      contactList => contactList.relaysNormalized,
     );
-    for (const relay of newRelays) {
-      if (!connections[relay] && !connections[relay.replace(/\/$/, '')])
-        addConnection(relay);
+    for (const relay of newRelaysNormarized) {
+      if (!connections[relay]) addConnection(relay);
     }
   };
 
@@ -256,7 +259,7 @@ export const Main = () => {
     console.log('startedPublish', signedEvent);
     setStatusText(t('info.publish.start'));
     for (const [url, connection] of Object.entries(connections)) {
-      if (publishMode === 'all' || contactList.relaysObj[url]) {
+      if (publishMode === 'all' || contactList.relaysNormalized.includes(url)) {
         broadcastToRelay(connection, signedEvent);
       }
     }
@@ -281,7 +284,7 @@ export const Main = () => {
     console.log('startedBroadcast', event);
     setStatusText(t('info.broadcast.start'));
     for (const [url, connection] of Object.entries(connections)) {
-      if (publishMode === 'all' || contactList.relaysObj[url]) {
+      if (publishMode === 'all' || contactList.relaysNormalized.includes(url)) {
         broadcastToRelay(connection, event);
       }
     }
@@ -309,10 +312,9 @@ export const Main = () => {
   };
 
   const addConnection = async (url: string, retry?: boolean) => {
-    if (!retry && (connections[url] || connections[url.replace(/\/$/, '')]))
-      return;
+    url = relayUrlNormarize(url);
+    if (!retry && connections[url]) return;
     const relay = NostrTools.relayInit(url);
-    url = url.replace(/\/$/, '');
     console.log('connecting to', url);
     const connection: Connection =
       retry && connections[url]
@@ -368,7 +370,7 @@ export const Main = () => {
         }
       }
       let kind3sUpdated = false;
-      const kind3Events = [
+      const kind3Events: NostrEvent[] = [
         ...(await relay.list([
           {
             authors: [login.npubHex],
@@ -383,7 +385,7 @@ export const Main = () => {
             limit: 20,
           },
         ])),
-      ] as NostrEvent[];
+      ];
       for (const event of kind3Events) {
         if (
           !(

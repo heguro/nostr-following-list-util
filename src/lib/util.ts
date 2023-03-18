@@ -36,3 +36,7 @@ export const msecToDateString = (msec?: number) => {
     date.getMonth() + 1
   }-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
 };
+
+export const relayUrlNormarize = (url: string) => {
+  return url.replace(/(:\/\/[^/]+)\/$/, '$1');
+};

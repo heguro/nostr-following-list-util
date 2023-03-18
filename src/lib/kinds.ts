@@ -1,6 +1,6 @@
 import { Nip07Relays } from '../@types/nip07';
 import { NostrEvent } from '../@types/nostrTools';
-import { jsonParseOrEmptyObject } from './util';
+import { jsonParseOrEmptyObject, relayUrlNormarize } from './util';
 
 import * as NostrTools from './nostrTools';
 
@@ -30,6 +30,7 @@ export type ContactList = {
   createdAt: number;
   contacts: string[];
   relays: string[];
+  relaysNormalized: string[];
   relaysObj: Nip07Relays;
   eventFrom: string[];
   event: NostrEvent;
@@ -83,38 +84,42 @@ export const kind3ToContactList = (params: {
   eventFrom: string[];
 }) => {
   const { event, eventFrom } = params;
-  return (
-    event.kind === 10002
-      ? {
-          id: event.id || '',
-          type: 'relays',
-          createdAt: event.created_at,
-          contacts: [],
-          relays: event.tags.filter(tag => tag[0] === 'r').map(tag => tag[1]),
-          relaysObj: Object.fromEntries(
-            event.tags
-              .filter(tag => tag[0] === 'r')
-              .map(tag => [
-                tag[1],
-                { read: tag[2] !== 'write', write: tag[2] !== 'read' },
-              ]),
-          ),
-          eventFrom,
-          event,
-          selected: false,
-        }
-      : {
-          id: event.id || '',
-          type: 'contacts',
-          createdAt: event.created_at,
-          contacts: event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]),
-          relays: Object.keys(jsonParseOrEmptyObject(event.content)),
-          relaysObj: jsonParseOrEmptyObject(event.content),
-          eventFrom,
-          event,
-          selected: false,
-        }
-  ) as ContactList;
+  return (event.kind === 10002
+    ? {
+        id: event.id || '',
+        type: 'relays',
+        createdAt: event.created_at,
+        contacts: [],
+        relays: event.tags.filter(tag => tag[0] === 'r').map(tag => tag[1]),
+        relaysNormalized: event.tags
+          .filter(tag => tag[0] === 'r')
+          .map(tag => relayUrlNormarize(tag[1])),
+        relaysObj: Object.fromEntries(
+          event.tags
+            .filter(tag => tag[0] === 'r')
+            .map(tag => [
+              tag[1],
+              { read: tag[2] !== 'write', write: tag[2] !== 'read' },
+            ]),
+        ),
+        eventFrom,
+        event,
+        selected: false,
+      }
+    : {
+        id: event.id || '',
+        type: 'contacts',
+        createdAt: event.created_at,
+        contacts: event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]),
+        relays: Object.keys(jsonParseOrEmptyObject(event.content)),
+        relaysNormalized: Object.keys(
+          jsonParseOrEmptyObject(event.content),
+        ).map(relayUrlNormarize),
+        relaysObj: jsonParseOrEmptyObject(event.content),
+        eventFrom,
+        event,
+        selected: false,
+      }) satisfies ContactList as ContactList;
 };
 
 export const contactListToKind3Event = (contactList: ContactList) => {
@@ -123,7 +128,7 @@ export const contactListToKind3Event = (contactList: ContactList) => {
     created_at: (Date.now() / 1000) | 0,
     id: undefined,
     sig: undefined,
-  } as NostrEvent;
+  } satisfies NostrEvent as NostrEvent;
 };
 
 export const contactListToKind10002Event = (contactList: ContactList) => {
@@ -139,5 +144,5 @@ export const contactListToKind10002Event = (contactList: ContactList) => {
       url,
       ...(rw.read && rw.write ? [] : rw.read ? ['read'] : ['write']),
     ]),
-  } as NostrEvent;
+  } satisfies NostrEvent as NostrEvent;
 };

@@ -18,6 +18,7 @@ import {
   delay,
   jsonParseOrEmptyArray,
   jsonParseOrEmptyObject,
+  relayUrlNormarize,
 } from '../../lib/util';
 import './BadgesMain.css';
 
@@ -113,7 +114,7 @@ export const BadgesMain = () => {
       event,
       eventFrom,
       selected: false,
-    } as BadgeAward;
+    } satisfies BadgeAward as BadgeAward;
   };
 
   const kind30008ToAcceptedBadges = (params: {
@@ -167,7 +168,7 @@ export const BadgesMain = () => {
       thumb: tags.find(tag => tag[0] === 'thumb')?.at(1) ?? null,
       event,
       eventFrom,
-    } as BadgeInfo;
+    } satisfies BadgeInfo as BadgeInfo;
   };
 
   const kind8sUpdate = () => {
@@ -205,12 +206,11 @@ export const BadgesMain = () => {
       kind3s.find(({ event }) => event.sig && event.kind === 3)?.event
         .created_at || 0,
     );
-    const newRelays = newContactLists.flatMap(
-      contactList => contactList.relays,
+    const newRelaysNormarized = newContactLists.flatMap(
+      contactList => contactList.relaysNormalized,
     );
-    for (const relay of newRelays) {
-      if (!connections[relay] && !connections[relay.replace(/\/$/, '')])
-        addConnection(relay);
+    for (const relay of newRelaysNormarized) {
+      if (!connections[relay]) addConnection(relay);
     }
   };
 
@@ -268,7 +268,7 @@ export const BadgesMain = () => {
     setStatusText(t('info.publish.start'));
     const contactList = contactLists[0];
     for (const [url, connection] of Object.entries(connections)) {
-      if (publishMode === 'all' || contactList.relaysObj[url]) {
+      if (publishMode === 'all' || contactList.relaysNormalized.includes(url)) {
         broadcastToRelay(connection, signedEvent);
       }
     }
@@ -339,17 +339,16 @@ export const BadgesMain = () => {
     setStatusText(t('info.broadcast.start'));
     const contactList = contactLists[0];
     for (const [url, connection] of Object.entries(connections)) {
-      if (publishMode === 'all' || contactList.relaysObj[url]) {
+      if (publishMode === 'all' || contactList.relaysNormalized.includes(url)) {
         broadcastToRelay(connection, event);
       }
     }
   };
 
   const addConnection = async (url: string, retry?: boolean) => {
-    if (!retry && (connections[url] || connections[url.replace(/\/$/, '')]))
-      return;
+    url = relayUrlNormarize(url);
+    if (!retry && connections[url]) return;
     const relay = NostrTools.relayInit(url);
-    url = url.replace(/\/$/, '');
     console.log('connecting to', url);
     const connection: Connection =
       retry && connections[url]
@@ -405,7 +404,7 @@ export const BadgesMain = () => {
         }
       }
       let kind3sUpdated = false;
-      const kind3Events = [
+      const kind3Events: NostrEvent[] = [
         ...(await relay.list([
           {
             authors: [login.npubHex],
@@ -420,7 +419,7 @@ export const BadgesMain = () => {
             limit: 20,
           },
         ])),
-      ] as NostrEvent[];
+      ];
       for (const event of kind3Events) {
         const alreadyHadIndex = kind3s.findIndex(
           kind3 =>
@@ -450,7 +449,7 @@ export const BadgesMain = () => {
 
       // badges
       let kind8sUpdated = false;
-      const kind8Events = [
+      const kind8Events: NostrEvent[] = [
         ...(await relay.list([
           {
             // awarded to you
@@ -468,7 +467,7 @@ export const BadgesMain = () => {
             limit: 1,
           },
         ])),
-      ] as NostrEvent[];
+      ];
       for (const event of kind8Events) {
         const alreadyHadIndex = kind8s.findIndex(
           kind8 => kind8.event.id === event.id,
@@ -502,7 +501,7 @@ export const BadgesMain = () => {
           kind30009IdList,
           kind30009PubkeyList,
         });
-        const kind30009Events = (await relay.list([
+        const kind30009Events: NostrEvent[] = await relay.list([
           {
             kinds: [30009],
             authors: keys
@@ -538,7 +537,7 @@ export const BadgesMain = () => {
             authors: kind30009PubkeyList,
             limit: 1000,
           },
-        ])) as NostrEvent[];
+        ]);
         for (const event of kind30009Events) {
           if (event.kind === 0) {
             const content = jsonParseOrEmptyObject(event.content);
