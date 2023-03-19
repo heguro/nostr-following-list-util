@@ -672,17 +672,17 @@ export const Main = () => {
               </div>
               {contactList.type === 'contacts' ? (
                 <div class="event-contact-count">
-                  Followings count: {contactList.contacts.length}
+                  {t('followings.count')}: {contactList.contacts.length}
                 </div>
               ) : (
                 <div class="event-relays-info">
-                  (Kind 10002: Relays infomation event)
+                  ({t('followings.kind10002')})
                 </div>
               )}
               <div class="event-relays">
                 <details>
                   <summary>
-                    Connected relays: {contactList.relays.length}
+                    {t('followings.relays')}: {contactList.relays.length}
                   </summary>
                   <div class="event-relays-list">
                     {contactList.relays
