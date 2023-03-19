@@ -674,19 +674,7 @@ export const Main = () => {
                   const contactList = contactLists.find(
                     c => c.event.kind === 3,
                   );
-                  console.log(
-                    JSON.stringify(contactList?.relaysObj),
-                    '\n',
-                    JSON.stringify(
-                      contactLists.find(c => c.event.kind === 10002)?.relaysObj,
-                    ),
-                    JSON.stringify(contactList?.relaysObj) ===
-                      JSON.stringify(
-                        contactLists.find(c => c.event.kind === 10002)
-                          ?.relaysObj,
-                      ),
-                  );
-                  //if (contactList) startPublishNewKind10002(contactList);
+                  if (contactList) startPublishNewKind10002(contactList);
                 }}>
                 {t('action.send.kind10002.basedOnKind3')}
               </button>
