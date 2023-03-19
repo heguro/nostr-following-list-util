@@ -81,7 +81,7 @@ export const App = () => {
         <p>
           {t('footer.additional.title')}:{' '}
           <a
-            href="https://scrapbox-reader.vercel.app/nostr/NostrFlu%E3%81%AE%E7%B4%B0%E3%81%8B%E3%81%84%E4%BB%95%E6%A7%98%E3%81%AA%E3%81%A9"
+            href="https://scrapbox-reader.vercel.app/nostr/NostrFlu%E3%81%AE%E4%BB%95%E6%A7%98"
             target={login.npubHex ? '_blank' : undefined}
             rel="noreferrer noopener">
             {t('footer.additional.link')}

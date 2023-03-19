@@ -29,7 +29,7 @@
   "followings.count": "フォロー数",
   "followings.kind10002": "kind:10002 リレー情報イベント",
   "followings.relays": "リレー接続数",
-  "footer.additional.link": "NostrFluの細かい仕様など",
+  "footer.additional.link": "NostrFluの仕様",
   "footer.additional.title": "追加説明",
   "footer.text.1": "公開鍵でログインした場合、フォローリストの取得・確認のみ可能です。",
   "footer.text.2": "秘密鍵またはNIP-07でログインした場合、フォローリストの取得・確認と再送信が可能です。",
