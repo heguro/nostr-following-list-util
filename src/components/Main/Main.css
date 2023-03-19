@@ -116,7 +116,7 @@
 
 .relays-list {
   display: grid;
-  grid-template-columns: 1fr 2rem 2rem 5rem;
+  grid-template-columns: 1fr 2rem 2rem max-content;
   align-items: center;
 }
 
