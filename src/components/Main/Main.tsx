@@ -64,7 +64,8 @@ const relayUrlListToBulkAdd = {
     'wss://relayer.ocha.one',
   ],
   japanese: [
-    'wss://relay.nostr.wirednet.jp',
+    // 'wss://relay.nostr.wirednet.jp',
+    // 'wss://nostrja-kari.heguro.com',
     'wss://relay-jp.nostr.wirednet.jp',
     'wss://nostr.h3z.jp',
     'wss://nostr-relay.nokotaro.com',
@@ -72,7 +73,6 @@ const relayUrlListToBulkAdd = {
     'wss://test.relay.nostrich.day',
     'wss://relay.nostr.or.jp',
     'wss://nostr.fediverse.jp',
-    'wss://nostrja-kari.heguro.com',
     'wss://nostream.ocha.one',
     'wss://relayer.ocha.one',
   ],
