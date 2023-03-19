@@ -18,7 +18,7 @@ import {
   delay,
   jsonParseOrEmptyArray,
   jsonParseOrEmptyObject,
-  relayUrlNormarize,
+  relayUrlNormalize,
 } from '../../lib/util';
 import './BadgesMain.css';
 
@@ -346,7 +346,7 @@ export const BadgesMain = () => {
   };
 
   const addConnection = async (url: string, retry?: boolean) => {
-    url = relayUrlNormarize(url);
+    url = relayUrlNormalize(url);
     if (!retry && connections[url]) return;
     const relay = NostrTools.relayInit(url);
     console.log('connecting to', url);

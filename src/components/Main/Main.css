@@ -63,3 +63,81 @@
   font-size: 0.8rem;
   word-break: break-all;
 }
+.dialog-relays {
+  width: min(calc(100vw - 2rem + 2px), 502px);
+  height: min(calc(95vh - 2rem + 2px), 702px);
+  border: 1px solid gray;
+  border-radius: 0.5rem;
+  padding: 0;
+}
+.dialog-relays::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.dialog-relays > div {
+  width: min(calc(100vw - 2rem), 500px);
+  height: min(calc(95vh - 2rem), 700px);
+  padding: 1rem;
+}
+
+.dialog-relays > div > div {
+  width: min(calc(100vw - 4rem), calc(500px - 2rem));
+  height: min(calc(95vh - 4rem), calc(700px - 2rem));
+  overflow-y: scroll;
+}
+
+.dialog-header {
+  margin: 0 0 0.5rem;
+  padding: 0 0 0.5rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.5);
+}
+
+.dialog-header > button {
+  padding: 0.25rem 0.75rem;
+}
+
+.dialog-relays textarea {
+  width: calc(100% - 2rem);
+  margin: 0.1rem 0.25rem;
+  height: 8rem;
+}
+
+.relays-input {
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.5);
+}
+
+.relays-list {
+  display: grid;
+  grid-template-columns: 1fr 2rem 2rem 5rem;
+  align-items: center;
+}
+
+.relays-list-header {
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.relays-list > div {
+  min-height: 2rem;
+}
+
+.relays-list-read,
+.relays-list-write,
+.relays-list-delete {
+  text-align: center;
+}
+
+.relays-list-read label,
+.relays-list-write label {
+  display: block;
+  width: 100%;
+  height: 2rem;
+}
+
+.relays-list-read,
+.relays-list-write {
+  -webkit-user-select: none;
+  user-select: none;
+}

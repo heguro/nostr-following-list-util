@@ -1,4 +1,5 @@
-import { useContext, useEffect, useState } from 'preact/hooks';
+import { useContext, useEffect, useRef, useState } from 'preact/hooks';
+import { Fragment } from 'preact/jsx-runtime';
 import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
 import { NostrEvent } from '../../@types/nostrTools';
 import { LoginContext } from '../../app';
@@ -11,12 +12,15 @@ import {
   kind3ToContactList,
   Profile,
   profileDefault,
+  updateContactListRelays,
 } from '../../lib/kinds';
 import * as NostrTools from '../../lib/nostrTools';
 import {
   msecToDateString,
-  relayUrlNormarize,
+  relayUrlNormalize,
   secToDateString,
+  shuffle,
+  uniqLast,
 } from '../../lib/util';
 import './Main.css';
 
@@ -39,6 +43,41 @@ const relayDefaults: Nip07Relays = {
   'wss://nostr.oxtr.dev': { read: true, write: true },
 };
 
+const relayUrlListToBulkAdd = {
+  globalFamousFree: [
+    'wss://relay.damus.io',
+    'wss://nos.lol',
+    'wss://relay.current.fyi',
+    'wss://relay.snort.social',
+    'wss://nostr-pub.semisol.dev',
+    'wss://nostr-pub.wellorder.net',
+    'wss://offchain.pub',
+  ],
+  japaneseGlobalTLWatchable: [
+    // Japanese IP addr only relays.
+    'wss://relay-jp.nostr.wirednet.jp',
+    'wss://nostr.h3z.jp',
+    'wss://nostr.holybea.com',
+    'wss://test.relay.nostrich.day',
+    'wss://relay.nostr.or.jp',
+    'wss://nostream.ocha.one',
+    'wss://relayer.ocha.one',
+  ],
+  japanese: [
+    'wss://relay.nostr.wirednet.jp',
+    'wss://relay-jp.nostr.wirednet.jp',
+    'wss://nostr.h3z.jp',
+    'wss://nostr-relay.nokotaro.com',
+    'wss://nostr.holybea.com',
+    'wss://test.relay.nostrich.day',
+    'wss://relay.nostr.or.jp',
+    'wss://nostr.fediverse.jp',
+    'wss://nostrja-kari.heguro.com',
+    'wss://nostream.ocha.one',
+    'wss://relayer.ocha.one',
+  ],
+};
+
 let connections: {
   [url: string]: Connection;
 } = {};
@@ -56,6 +95,13 @@ export const Main = () => {
   const [publishMode, setPublishMode] = useState<'registered' | 'all'>(
     'registered',
   );
+  const relaysDialogRef = useRef<HTMLDialogElement>(null);
+  const relaysContainerRef = useRef<HTMLDivElement>(null);
+  const [contactListToEditOld, setContactListToEditOld] =
+    useState<ContactList | null>(null);
+  const [contactListToEdit, setContactListToEdit] =
+    useState<ContactList | null>(null);
+  const [relaysInputText, setRelaysInputText] = useState('');
 
   const { setLogin, login } = useContext(LoginContext);
   const writable = login.type !== 'npub';
@@ -263,17 +309,18 @@ export const Main = () => {
         broadcastToRelay(connection, signedEvent);
       }
     }
+    return signedEvent;
   };
 
   const startPublishNewKind3 = async (contactList: ContactList) => {
-    signAndPublish({
+    return signAndPublish({
       contactList,
       event: contactListToKind3Event(contactList),
     });
   };
 
   const startPublishNewKind10002 = async (contactList: ContactList) => {
-    signAndPublish({
+    return signAndPublish({
       contactList,
       event: contactListToKind10002Event(contactList),
     });
@@ -312,7 +359,7 @@ export const Main = () => {
   };
 
   const addConnection = async (url: string, retry?: boolean) => {
-    url = relayUrlNormarize(url);
+    url = relayUrlNormalize(url);
     if (!retry && connections[url]) return;
     const relay = NostrTools.relayInit(url);
     console.log('connecting to', url);
@@ -626,57 +673,70 @@ export const Main = () => {
                       {t('action.send.overwrite.button')}
                     </button>
                   )}
-                  {(contactList.event.kind === 3 &&
+                  {((contactList.event.kind === 3 &&
                     contactList.createdAt === latestGotKind3Time) ||
                     (contactList.event.kind === 10002 &&
-                      contactList.createdAt === latestGotKind10002Time && (
-                        <button
-                          onClick={() => {
-                            if (
-                              contactList.event.kind === 10002 ||
-                              confirm(
-                                t(
-                                  'action.send.broadcast.confirm',
-                                  contactList.contacts.length,
-                                  contactList.relays.length,
-                                  (publishMode === 'registered' &&
-                                    contactList.relays.length) ||
-                                    Object.keys(connections).length,
-                                ),
-                              )
-                            ) {
-                              startBroadcast(contactList);
-                            }
-                          }}>
-                          {t('action.send.broadcast.button')}
-                        </button>
-                      ))}
-                  {contactList.event.kind === 3 && (
+                      contactList.createdAt === latestGotKind10002Time)) && (
                     <button
                       onClick={() => {
-                        const unfollow = contactList.contacts.includes(
-                          login.npubHex,
-                        );
-                        const followCount =
-                          contactList.contacts.length + (unfollow ? -1 : 1);
                         if (
+                          contactList.event.kind === 10002 ||
                           confirm(
                             t(
-                              unfollow
-                                ? 'action.myself.unfollow.confirm'
-                                : 'action.myself.follow.confirm',
-                              followCount,
+                              'action.send.broadcast.confirm',
+                              contactList.contacts.length,
+                              contactList.relays.length,
+                              (publishMode === 'registered' &&
+                                contactList.relays.length) ||
+                                Object.keys(connections).length,
                             ),
                           )
                         ) {
-                          startFollowMyself({ contactList, unfollow });
+                          startBroadcast(contactList);
                         }
                       }}>
-                      {contactList.contacts.includes(login.npubHex)
-                        ? t('action.myself.unfollow.button')
-                        : t('action.myself.follow.button')}
+                      {t('action.send.broadcast.button')}
                     </button>
                   )}
+                  {contactList.event.kind === 3 &&
+                    contactList.createdAt === latestGotKind3Time && (
+                      <>
+                        <button
+                          onClick={() => {
+                            const unfollow = contactList.contacts.includes(
+                              login.npubHex,
+                            );
+                            const followCount =
+                              contactList.contacts.length + (unfollow ? -1 : 1);
+                            if (
+                              confirm(
+                                t(
+                                  unfollow
+                                    ? 'action.myself.unfollow.confirm'
+                                    : 'action.myself.follow.confirm',
+                                  followCount,
+                                ),
+                              )
+                            ) {
+                              startFollowMyself({ contactList, unfollow });
+                            }
+                          }}>
+                          {contactList.contacts.includes(login.npubHex)
+                            ? t('action.myself.unfollow.button')
+                            : t('action.myself.follow.button')}
+                        </button>
+                        <button
+                          disabled={!contactLists.some(c => c.event.kind === 3)}
+                          onClick={() => {
+                            setContactListToEdit(contactList);
+                            setContactListToEditOld(contactList);
+                            setRelaysInputText('');
+                            relaysDialogRef.current?.showModal();
+                          }}>
+                          {t('action.relays.show')}
+                        </button>
+                      </>
+                    )}
                 </>
               )}
               <button
@@ -690,6 +750,278 @@ export const Main = () => {
           </div>
         ))}
       </div>
+      <dialog
+        class="dialog-relays"
+        ref={relaysDialogRef}
+        onClick={evt => {
+          if (relaysDialogRef.current === evt.target) {
+            relaysDialogRef.current?.close();
+            console.log('closed');
+          }
+        }}>
+        <div class="relays-container" ref={relaysContainerRef}>
+          {contactListToEdit && contactListToEditOld && (
+            <div class="relays-app">
+              <div class="dialog-header">
+                <button
+                  onClick={() => {
+                    relaysDialogRef.current?.close();
+                    setContactListToEdit(null);
+                    setContactListToEditOld(null);
+                  }}>
+                  {t('text.close')}
+                </button>
+                <button
+                  disabled={
+                    contactListToEdit.relays.length === 0 ||
+                    JSON.stringify(contactListToEdit.relaysObj) ===
+                      JSON.stringify(contactListToEditOld.relaysObj)
+                  }
+                  onClick={async () => {
+                    // send
+                    const contactList = contactListToEdit;
+                    const now = Math.floor(Date.now() / 1000);
+                    if (
+                      confirm(
+                        t(
+                          'action.send.overwrite.confirm',
+                          contactList.contacts.length,
+                          contactList.relays.length,
+                          (publishMode === 'registered' &&
+                            contactList.relays.length) ||
+                            Object.keys(connections).length,
+                        ),
+                      )
+                    ) {
+                      const kind3 = await startPublishNewKind3(contactList);
+                      const kind10002 = await startPublishNewKind10002(
+                        contactList,
+                      );
+                      if (kind3)
+                        kind3s.push({
+                          eventFrom: [`<sent: ${secToDateString(now)}>`],
+                          event: kind3,
+                        });
+                      if (kind10002)
+                        kind3s.push({
+                          eventFrom: [`<sent: ${secToDateString(now)}>`],
+                          event: kind10002,
+                        });
+                      kind3sUpdate();
+                      setContactListToEditOld(contactList);
+                    }
+                  }}>
+                  {`${t('relays.send')} (${
+                    contactListToEdit.relays.length
+                  } Relays)`}
+                </button>
+                <button
+                  disabled={
+                    contactListToEdit.relays.length === 0 ||
+                    JSON.stringify(contactListToEdit.relaysObj) ===
+                      JSON.stringify(contactListToEditOld.relaysObj)
+                  }
+                  onClick={() => {
+                    setContactListToEdit(contactListToEditOld);
+                  }}>
+                  {t('relays.reset')}
+                </button>
+              </div>
+              <div class="relays-input">
+                <details>
+                  <summary>{t('relays.add.show')}</summary>
+                  <div class="relays-input-buttons">
+                    <button
+                      onClick={() => {
+                        const newUrls = shuffle(
+                          relayUrlListToBulkAdd.globalFamousFree,
+                        ).slice(-5);
+                        const urls = uniqLast([
+                          ...newUrls,
+                          ...relaysInputText.split('\n').filter(url => url),
+                        ]);
+                        setRelaysInputText(urls.join('\n'));
+                      }}>
+                      + {t('relays.add.famous')}
+                    </button>
+                    {t('___lang') === 'ja' && (
+                      <button
+                        onClick={() => {
+                          const newUrls = relayUrlListToBulkAdd.japanese;
+                          const urls = uniqLast([
+                            ...newUrls,
+                            ...relaysInputText.split('\n').filter(url => url),
+                          ]);
+                          setRelaysInputText(urls.join('\n'));
+                        }}>
+                        + {t('relays.add.japanese')}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setRelaysInputText('');
+                      }}>
+                      ×
+                    </button>
+                  </div>
+                  <textarea
+                    placeholder={`${t('relays.input.message')}\n\n${t(
+                      'text.example',
+                    )}:\nwss://relay.damus.io\nwss://relay.snort.social\n...`}
+                    value={relaysInputText}
+                    onInput={evt => {
+                      if (evt.target instanceof HTMLTextAreaElement) {
+                        setRelaysInputText(evt.target.value);
+                      }
+                    }}
+                  />
+                  <div class="relays-input-buttons">
+                    <button
+                      onClick={() => {
+                        const newRelaysObj: Nip07Relays = {
+                          ...contactListToEdit.relaysObj,
+                        };
+                        const urls = relaysInputText
+                          .split('\n')
+                          .map(relayUrlNormalize)
+                          .filter(url =>
+                            /^((ws|http)s?:\/\/)?[\w.-]+(\/|$)/.test(url),
+                          )
+                          .map(relayUrlNormalize);
+                        for (const url of urls) {
+                          if (
+                            !contactListToEdit.relaysNormalized.includes(url)
+                          ) {
+                            newRelaysObj[url] = {
+                              read: true,
+                              write: true,
+                            };
+                          }
+                        }
+                        setContactListToEdit(
+                          updateContactListRelays(
+                            contactListToEdit,
+                            newRelaysObj,
+                          ),
+                        );
+                        setRelaysInputText('');
+                      }}>
+                      {t('relays.add.toList')}
+                    </button>
+                  </div>
+                </details>
+              </div>
+              <div class="relays-input-buttons">
+                <button
+                  onClick={() => {
+                    const newRelaysObj: Nip07Relays = {};
+                    for (const [url, info] of Object.entries(
+                      contactListToEdit.relaysObj,
+                    )) {
+                      const duppedInfo: typeof info | undefined =
+                        contactListToEditOld.relaysObj[url];
+                      newRelaysObj[relayUrlNormalize(url)] = {
+                        read: !duppedInfo?.read || info.read,
+                        write: !duppedInfo?.write || info.write,
+                      };
+                    }
+                    setContactListToEdit(
+                      updateContactListRelays(contactListToEdit, newRelaysObj),
+                    );
+                  }}>
+                  {t('relays.normalize')}
+                </button>
+              </div>
+              <div class="relays-list">
+                <div class="relays-list-header relays-list-relay-url">
+                  {t('relays.relay.url')}
+                </div>
+                <div class="relays-list-header relays-list-read">
+                  {t('relays.relay.r')}
+                </div>
+                <div class="relays-list-header relays-list-write">
+                  {t('relays.relay.w')}
+                </div>
+                <div class="relays-list-header relays-list-delete">
+                  {t('relays.relay.action')}
+                </div>
+                {Object.entries(contactListToEdit.relaysObj).map(
+                  ([url, info]) => (
+                    <Fragment key={url}>
+                      <div class="relays-list-relay-url">
+                        <code>{url}</code>
+                      </div>
+                      <div class="relays-list-read">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={info.read}
+                            title="read"
+                            onChange={evt => {
+                              if (evt.target instanceof HTMLInputElement) {
+                                setContactListToEdit({
+                                  ...contactListToEdit,
+                                  relaysObj: {
+                                    ...contactListToEdit.relaysObj,
+                                    [url]: {
+                                      ...info,
+                                      read: evt.target.checked,
+                                    },
+                                  },
+                                });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <div class="relays-list-write">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={info.write}
+                            title="write"
+                            onChange={evt => {
+                              if (evt.target instanceof HTMLInputElement) {
+                                setContactListToEdit({
+                                  ...contactListToEdit,
+                                  relaysObj: {
+                                    ...contactListToEdit.relaysObj,
+                                    [url]: {
+                                      ...info,
+                                      write: evt.target.checked,
+                                    },
+                                  },
+                                });
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <div class="relays-list-delete">
+                        <button
+                          onClick={() => {
+                            const newRelaysObj = {
+                              ...contactListToEdit.relaysObj,
+                            };
+                            delete newRelaysObj[url];
+                            setContactListToEdit(
+                              updateContactListRelays(
+                                contactListToEdit,
+                                newRelaysObj,
+                              ),
+                            );
+                          }}>
+                          {t('relays.relay.delete')}
+                        </button>
+                      </div>
+                    </Fragment>
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </dialog>
     </div>
   );
 };

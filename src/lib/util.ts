@@ -37,6 +37,27 @@ export const msecToDateString = (msec?: number) => {
   }-${date.getDate()}_${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
 };
 
-export const relayUrlNormarize = (url: string) => {
-  return url.replace(/(:\/\/[^/]+)\/$/, '$1');
+export const relayUrlNormalize = (url: string) => {
+  return url
+    .replace(/^[⬤\s]+|\s+$/g, '')
+    .replace(/^https?:\/\//, 'wss://')
+    .replace(/^(?!wss?:\/\/)([\w.-]+(\/|$))/, 'wss://$1')
+    .replace(/(:\/\/[^/]+)\/$/, '$1');
+};
+
+export const shuffle = <T>(arr: T[]) => {
+  const newArr = [...arr];
+  for (let i = newArr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+  }
+  return newArr;
+};
+
+export const uniq = <T>(arr: T[]) => {
+  return [...new Set(arr)];
+};
+
+export const uniqLast = <T>(arr: T[]) => {
+  return uniq(arr.reverse()).reverse();
 };
