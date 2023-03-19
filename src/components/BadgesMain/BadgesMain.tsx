@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
 import { NostrEvent } from '../../@types/nostrTools';
-import { LoginContext } from '../../app';
-import { t } from '../../lib/i18n';
+import { LoginContext, PrefsContext } from '../../app';
+import { i18n, I18nKey, I18nParams, LangNames } from '../../lib/i18n';
 import {
   AcceptedBadge,
   BadgeAward,
@@ -82,9 +82,12 @@ export const BadgesMain = () => {
   const [acceptedBadges, setAcceptedBadges] = useState<AcceptedBadge[]>([]);
   const [awardedBadges, setAwardedBadges] = useState<BadgeAward[]>([]);
 
+  const { setLang, lang } = useContext(PrefsContext);
   const { setLogin, login } = useContext(LoginContext);
   const writable = login.type !== 'npub';
   const npub = NostrTools.nip19.npubEncode(login.npubHex);
+
+  const t = (key: I18nKey, ...param: I18nParams) => i18n(lang, key, ...param);
 
   const splitKind30009Id = (kind30009Id: string) => {
     const [, kind30009Pubkey, kind30009D] = kind30009Id.split(':');
@@ -720,28 +723,56 @@ export const BadgesMain = () => {
         <span class="status-text">{statusText}</span>
       </div>
       <div class="events-actions">
-        <div>
-          ({t('setting.label')}){' '}
-          <label for="publish-mode-select">
-            {t('setting.publishMode.label')}:{' '}
-          </label>
-          <select
-            id="publish-mode-select"
-            value={publishMode}
-            onChange={({ target }) => {
-              if (
-                target instanceof HTMLSelectElement &&
-                (target.value === 'registered' || target.value === 'all')
-              ) {
-                setPublishMode(target.value);
-              }
-            }}>
-            <option value="registered">
-              {t('setting.publishMode.registered')}
-            </option>
-            <option value="all">{t('setting.publishMode.all')}</option>
-          </select>
-        </div>
+        <details class="settings">
+          <summary>({t('setting.label')})</summary>
+          <div>
+            <div>
+              <label for="publish-mode-select">
+                {t('setting.publishMode.label')}:{' '}
+                <select
+                  id="publish-mode-select"
+                  value={publishMode}
+                  onChange={({ target }) => {
+                    if (
+                      target instanceof HTMLSelectElement &&
+                      (target.value === 'registered' || target.value === 'all')
+                    ) {
+                      setPublishMode(target.value);
+                    }
+                  }}>
+                  <option value="registered">
+                    {t('setting.publishMode.registered')}{' '}
+                    {t('text.recommended')}
+                  </option>
+                  <option value="all">{t('setting.publishMode.all')}</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label for="lang-select">
+                {t('setting.lang.label')}:{' '}
+                <select
+                  id="lang-select"
+                  value={lang}
+                  onChange={({ target }) => {
+                    if (!(target instanceof HTMLSelectElement)) return;
+                    const langValue = target.value;
+                    if (langValue === 'default') return setLang('default');
+                    for (const lang of LangNames.keys()) {
+                      if (lang === langValue) return setLang(lang);
+                    }
+                  }}>
+                  <option value="default">{t('text.default')}</option>
+                  {Array.from(LangNames.entries()).map(([key, name]) => (
+                    <option value={key} key={key}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        </details>
         <button
           onClick={() => {
             const selected = awardedBadges.filter(badge => badge.selected);

@@ -2,8 +2,8 @@ import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact/jsx-runtime';
 import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
 import { NostrEvent } from '../../@types/nostrTools';
-import { LoginContext } from '../../app';
-import { t } from '../../lib/i18n';
+import { LoginContext, PrefsContext } from '../../app';
+import { i18n, I18nKey, I18nParams, LangNames } from '../../lib/i18n';
 import {
   Connection,
   ContactList,
@@ -102,10 +102,14 @@ export const Main = () => {
   const [contactListToEdit, setContactListToEdit] =
     useState<ContactList | null>(null);
   const [relaysInputText, setRelaysInputText] = useState('');
+  const [showKind10002, setShowKind10002] = useState(false);
 
+  const { setLang, lang } = useContext(PrefsContext);
   const { setLogin, login } = useContext(LoginContext);
   const writable = login.type !== 'npub';
   const npub = NostrTools.nip19.npubEncode(login.npubHex);
+
+  const t = (key: I18nKey, ...param: I18nParams) => i18n(lang, key, ...param);
 
   const kind3sUpdate = () => {
     kind3s.sort((a, b) => b.event.created_at - a.event.created_at);
@@ -572,28 +576,68 @@ export const Main = () => {
         <span class="status-text">{statusText}</span>
       </div>
       <div class="events-actions">
-        <div>
-          ({t('setting.label')}){' '}
-          <label for="publish-mode-select">
-            {t('setting.publishMode.label')}:{' '}
-          </label>
-          <select
-            id="publish-mode-select"
-            value={publishMode}
-            onChange={({ target }) => {
-              if (
-                target instanceof HTMLSelectElement &&
-                (target.value === 'registered' || target.value === 'all')
-              ) {
-                setPublishMode(target.value);
-              }
-            }}>
-            <option value="registered">
-              {t('setting.publishMode.registered')} {t('text.recommended')}
-            </option>
-            <option value="all">{t('setting.publishMode.all')}</option>
-          </select>
-        </div>
+        <details class="settings">
+          <summary>({t('setting.label')})</summary>
+          <div>
+            <div>
+              <label for="publish-mode-select">
+                {t('setting.publishMode.label')}:{' '}
+                <select
+                  id="publish-mode-select"
+                  value={publishMode}
+                  onChange={({ target }) => {
+                    if (
+                      target instanceof HTMLSelectElement &&
+                      (target.value === 'registered' || target.value === 'all')
+                    ) {
+                      setPublishMode(target.value);
+                    }
+                  }}>
+                  <option value="registered">
+                    {t('setting.publishMode.registered')}{' '}
+                    {t('text.recommended')}
+                  </option>
+                  <option value="all">{t('setting.publishMode.all')}</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showKind10002}
+                  onChange={() => {
+                    setShowKind10002(!showKind10002);
+                  }}
+                />
+                {t('setting.showKind10002.label')}
+              </label>
+            </div>
+            <div>
+              <label for="lang-select">
+                {t('setting.lang.label')}:{' '}
+                <select
+                  id="lang-select"
+                  value={lang}
+                  onChange={({ target }) => {
+                    if (!(target instanceof HTMLSelectElement)) return;
+                    const langValue = target.value;
+                    if (langValue === 'default') return setLang('default');
+                    for (const lang of LangNames.keys()) {
+                      if (lang === langValue) return setLang(lang);
+                    }
+                  }}>
+                  <option value="default">{t('text.default')}</option>
+                  {Array.from(LangNames.entries()).map(([key, name]) => (
+                    <option value={key} key={key}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        </details>
         <button onClick={uploadLocalBackupFile}>
           {t('action.backup.load')}
         </button>
@@ -602,153 +646,160 @@ export const Main = () => {
         </button>
       </div>
       <div class="contact-events">
-        {contactLists.map((contactList, index) => (
-          <div class="contact-event" key={contactList.id}>
-            <div class="event-date">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={contactList.selected}
-                  onChange={() => {
-                    const newContactLists = [...contactLists];
-                    newContactLists[index] = {
-                      ...contactList,
-                      selected: !contactList.selected,
-                    };
-                    setContactLists(newContactLists);
-                  }}
-                />
-                Event Creation Time:{' '}
-                {contactList.event.sig
-                  ? new Date(contactList.createdAt * 1000).toLocaleString()
-                  : '<new>'}
-              </label>
-            </div>
-            {contactList.type === 'contacts' ? (
-              <div class="event-contact-count">
-                Followings count: {contactList.contacts.length}
+        {contactLists
+          .filter(c => (showKind10002 ? true : c.event.kind === 3))
+          .map((contactList, index) => (
+            <div class="contact-event" key={contactList.id}>
+              <div class="event-date">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={contactList.selected}
+                    onChange={() => {
+                      const newContactLists = [...contactLists];
+                      newContactLists[index] = {
+                        ...contactList,
+                        selected: !contactList.selected,
+                      };
+                      setContactLists(newContactLists);
+                    }}
+                  />
+                  Event Creation Time:{' '}
+                  {contactList.event.sig
+                    ? new Date(contactList.createdAt * 1000).toLocaleString()
+                    : '<new>'}
+                </label>
               </div>
-            ) : (
-              <div class="event-relays-info">
-                (Kind 10002: Relays infomation event)
-              </div>
-            )}
-            <div class="event-relays">
-              <details>
-                <summary>Connected relays: {contactList.relays.length}</summary>
-                <div class="event-relays-list">
-                  {contactList.relays
-                    .map(url => url.replace('wss://', ''))
-                    .join(', ')}
+              {contactList.type === 'contacts' ? (
+                <div class="event-contact-count">
+                  Followings count: {contactList.contacts.length}
                 </div>
-              </details>
-            </div>
-            <div class="event-froms">
-              From:{' '}
-              {contactList.eventFrom
-                .map(url => url.replace('wss://', ''))
-                .join(', ')}
-            </div>
-            <div class="event-actions">
-              {writable && (
-                <>
-                  {contactList.event.kind === 3 && (
-                    <button
-                      onClick={() => {
-                        if (
-                          confirm(
-                            t(
-                              'action.send.overwrite.confirm',
-                              contactList.contacts.length,
-                              contactList.relays.length,
-                              (publishMode === 'registered' &&
-                                contactList.relays.length) ||
-                                Object.keys(connections).length,
-                            ),
-                          )
-                        ) {
-                          startPublishNewKind3(contactList);
-                        }
-                      }}>
-                      {t('action.send.overwrite.button')}
-                    </button>
-                  )}
-                  {((contactList.event.kind === 3 &&
-                    contactList.createdAt === latestGotKind3Time) ||
-                    (contactList.event.kind === 10002 &&
-                      contactList.createdAt === latestGotKind10002Time)) && (
-                    <button
-                      onClick={() => {
-                        if (
-                          contactList.event.kind === 10002 ||
-                          confirm(
-                            t(
-                              'action.send.broadcast.confirm',
-                              contactList.contacts.length,
-                              contactList.relays.length,
-                              (publishMode === 'registered' &&
-                                contactList.relays.length) ||
-                                Object.keys(connections).length,
-                            ),
-                          )
-                        ) {
-                          startBroadcast(contactList);
-                        }
-                      }}>
-                      {t('action.send.broadcast.button')}
-                    </button>
-                  )}
-                  {contactList.event.kind === 3 &&
-                    contactList.createdAt === latestGotKind3Time && (
-                      <>
-                        <button
-                          onClick={() => {
-                            const unfollow = contactList.contacts.includes(
-                              login.npubHex,
-                            );
-                            const followCount =
-                              contactList.contacts.length + (unfollow ? -1 : 1);
-                            if (
-                              confirm(
-                                t(
-                                  unfollow
-                                    ? 'action.myself.unfollow.confirm'
-                                    : 'action.myself.follow.confirm',
-                                  followCount,
-                                ),
-                              )
-                            ) {
-                              startFollowMyself({ contactList, unfollow });
-                            }
-                          }}>
-                          {contactList.contacts.includes(login.npubHex)
-                            ? t('action.myself.unfollow.button')
-                            : t('action.myself.follow.button')}
-                        </button>
-                        <button
-                          disabled={!contactLists.some(c => c.event.kind === 3)}
-                          onClick={() => {
-                            setContactListToEdit(contactList);
-                            setContactListToEditOld(contactList);
-                            setRelaysInputText('');
-                            relaysDialogRef.current?.showModal();
-                          }}>
-                          {t('action.relays.show')}
-                        </button>
-                      </>
-                    )}
-                </>
+              ) : (
+                <div class="event-relays-info">
+                  (Kind 10002: Relays infomation event)
+                </div>
               )}
-              <button
-                onClick={() => {
-                  downloadBackupFile(contactList);
-                }}>
-                {t('action.backup.download')}
-              </button>
+              <div class="event-relays">
+                <details>
+                  <summary>
+                    Connected relays: {contactList.relays.length}
+                  </summary>
+                  <div class="event-relays-list">
+                    {contactList.relays
+                      .map(url => url.replace('wss://', ''))
+                      .join(', ')}
+                  </div>
+                </details>
+              </div>
+              <div class="event-froms">
+                From:{' '}
+                {contactList.eventFrom
+                  .map(url => url.replace('wss://', ''))
+                  .join(', ')}
+              </div>
+              <div class="event-actions">
+                {writable && (
+                  <>
+                    {contactList.event.kind === 3 && (
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              t(
+                                'action.send.overwrite.confirm',
+                                contactList.contacts.length,
+                                contactList.relays.length,
+                                (publishMode === 'registered' &&
+                                  contactList.relays.length) ||
+                                  Object.keys(connections).length,
+                              ),
+                            )
+                          ) {
+                            startPublishNewKind3(contactList);
+                          }
+                        }}>
+                        {t('action.send.overwrite.button')}
+                      </button>
+                    )}
+                    {((contactList.event.kind === 3 &&
+                      contactList.createdAt === latestGotKind3Time) ||
+                      (contactList.event.kind === 10002 &&
+                        contactList.createdAt === latestGotKind10002Time)) && (
+                      <button
+                        onClick={() => {
+                          if (
+                            contactList.event.kind === 10002 ||
+                            confirm(
+                              t(
+                                'action.send.broadcast.confirm',
+                                contactList.contacts.length,
+                                contactList.relays.length,
+                                (publishMode === 'registered' &&
+                                  contactList.relays.length) ||
+                                  Object.keys(connections).length,
+                              ),
+                            )
+                          ) {
+                            startBroadcast(contactList);
+                          }
+                        }}>
+                        {t('action.send.broadcast.button')}
+                      </button>
+                    )}
+                    {contactList.event.kind === 3 &&
+                      contactList.createdAt === latestGotKind3Time && (
+                        <>
+                          <button
+                            onClick={() => {
+                              const unfollow = contactList.contacts.includes(
+                                login.npubHex,
+                              );
+                              const followCount =
+                                contactList.contacts.length +
+                                (unfollow ? -1 : 1);
+                              if (
+                                confirm(
+                                  t(
+                                    unfollow
+                                      ? 'action.myself.unfollow.confirm'
+                                      : 'action.myself.follow.confirm',
+                                    followCount,
+                                  ),
+                                )
+                              ) {
+                                startFollowMyself({ contactList, unfollow });
+                              }
+                            }}>
+                            {contactList.contacts.includes(login.npubHex)
+                              ? t('action.myself.unfollow.button')
+                              : t('action.myself.follow.button')}
+                          </button>
+                          <button
+                            disabled={
+                              !contactLists.some(c => c.event.kind === 3)
+                            }
+                            onClick={() => {
+                              setContactListToEdit(contactList);
+                              setContactListToEditOld(contactList);
+                              setRelaysInputText('');
+                              relaysDialogRef.current?.showModal();
+                            }}>
+                            {t('action.relays.show')}
+                          </button>
+                        </>
+                      )}
+                  </>
+                )}
+                <button
+                  onClick={() => {
+                    downloadBackupFile(contactList);
+                  }}>
+                  {t('action.backup.download')}
+                </button>
+              </div>
+              <hr />
             </div>
-            <hr />
-          </div>
-        ))}
+          ))}
       </div>
       <dialog
         class="dialog-relays"

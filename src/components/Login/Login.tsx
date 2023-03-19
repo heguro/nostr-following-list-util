@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'preact/hooks';
 import { Nip07Nostr } from '../../@types/nip07';
-import { LoginContext } from '../../app';
-import { t } from '../../lib/i18n';
+import { LoginContext, PrefsContext } from '../../app';
+import { i18n, I18nKey, I18nParams } from '../../lib/i18n';
 import * as NostrTools from '../../lib/nostrTools';
 import './Login.css';
 
@@ -10,6 +10,7 @@ declare global {
 }
 
 export const Login = () => {
+  const { lang } = useContext(PrefsContext);
   const { setLogin } = useContext(LoginContext);
   const [loginKeyInput, setLoginKeyInput] = useState('');
   const [loginStatus, setLoginStatus] = useState<'' | 'loading' | 'success'>(
@@ -17,6 +18,8 @@ export const Login = () => {
   );
   const [loginMode, setLoginMode] = useState<'main' | 'badgesMain'>('main');
   const [nip07Available, setNip07Available] = useState(false);
+
+  const t = (key: I18nKey, ...param: I18nParams) => i18n(lang, key, ...param);
 
   useEffect(() => {
     let checkCount = 0;

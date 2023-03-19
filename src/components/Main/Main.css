@@ -52,6 +52,12 @@
 .connection-status {
   min-height: 1.5rem;
 }
+.settings > div {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(128, 128, 128, 0.5);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.5);
+}
 .event-relays-info {
   opacity: 0.6;
 }
