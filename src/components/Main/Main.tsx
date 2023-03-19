@@ -48,8 +48,7 @@ const relayDefaults: Nip07Relays = {
 
 const relayUrlListToBulkAdd = {
   globalFamousFree: [
-    // 海外有名リレー
-    // 以下の7つから5つランダムで選択
+    // pick 5 from these
     'wss://relay.damus.io',
     'wss://nos.lol',
     'wss://relay.current.fyi',
@@ -59,8 +58,6 @@ const relayUrlListToBulkAdd = {
     'wss://offchain.pub',
   ],
   japanese: [
-    // 日本リレー （常時全追加）
-    // 言語設定「日本語」の場合のみ表示
     'wss://relay-jp.nostr.wirednet.jp',
     'wss://nostr.h3z.jp',
     'wss://nostr-relay.nokotaro.com',
@@ -70,7 +67,7 @@ const relayUrlListToBulkAdd = {
     'wss://nostr.fediverse.jp',
     'wss://nostream.ocha.one',
     'wss://relayer.ocha.one',
-    // 以下保留
+    // disabled for some reason
     // 'wss://relay.nostr.wirednet.jp',
     // 'wss://nostrja-kari.heguro.com',
   ],
