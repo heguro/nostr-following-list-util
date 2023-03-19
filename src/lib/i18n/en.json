@@ -67,7 +67,7 @@
   "relays.reset": "Reset",
   "relays.send": "Send",
   "setting.addRelayManually.button": "Connect",
-  "setting.addRelayManually.label": "Manually add relay to connect",
+  "setting.addRelayManually.label": "Manually connect to relay",
   "setting.label": "Settings",
   "setting.lang.label": "Language",
   "setting.publishMode.all": "As many relays as possible",

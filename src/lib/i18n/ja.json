@@ -56,7 +56,7 @@
   "relays.add.show": "追加…",
   "relays.add.toList": "このリレーを追加",
   "relays.input.message": "追加したいリレーURLを入力…",
-  "relays.normalize": "全URLを正規化",
+  "relays.normalize": "リストを正規化",
   "relays.relay.action": "操作",
   "relays.relay.delete": "削除",
   "relays.relay.r": "読",

@@ -768,7 +768,9 @@ export const Main = () => {
                       }
                     }}
                   />
-                  <button type="submit">接続</button>
+                  <button type="submit">
+                    {t('setting.addRelayManually.button')}
+                  </button>
                 </label>
               </form>
             </div>
