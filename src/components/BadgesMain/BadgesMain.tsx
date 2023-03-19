@@ -52,6 +52,7 @@ let connections: {
 } = {};
 
 let profileCreatedAt = 0;
+let profileEventFrom: string[] = [];
 // let currentBroadcastingId = '';
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
 let kind8s: { eventFrom: string[]; event: NostrEvent }[] = [];
@@ -394,6 +395,7 @@ export const BadgesMain = () => {
             setStatusText(t('info.showingBadges'));
           }
           profileCreatedAt = event.created_at;
+          profileEventFrom = [url];
           const content = jsonParseOrEmptyArray(event.content);
           setProfile({
             loaded: true,
@@ -403,7 +405,10 @@ export const BadgesMain = () => {
             username: content.username || content.name || '',
             about: content.about || '',
             picture: content.picture || '',
+            event,
           });
+        } else if (event.created_at === profileCreatedAt) {
+          profileEventFrom.push(url);
         }
       }
       let kind3sUpdated = false;
@@ -559,6 +564,7 @@ export const BadgesMain = () => {
                   username: content.username || content.name || '',
                   about: content.about || '',
                   picture: content.picture || '',
+                  event,
                 },
               });
               kind30009Updated = true;
@@ -643,6 +649,7 @@ export const BadgesMain = () => {
       kind30009PubkeyList = [];
     }
     profileCreatedAt = 0;
+    profileEventFrom = [];
     relays.forEach(url => {
       addConnection(url);
     });

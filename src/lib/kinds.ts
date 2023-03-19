@@ -12,6 +12,14 @@ export type Connection = {
   selected: boolean;
 };
 
+const eventDefault = {
+  created_at: 0,
+  pubkey: '',
+  kind: 0,
+  content: '',
+  tags: [],
+} satisfies NostrEvent as NostrEvent;
+
 export const profileDefault = {
   loaded: false,
   id: '',
@@ -20,6 +28,7 @@ export const profileDefault = {
   username: '',
   about: '',
   picture: '',
+  event: eventDefault,
 };
 
 export type Profile = typeof profileDefault;

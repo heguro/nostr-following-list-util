@@ -81,6 +81,7 @@ let connections: {
 } = {};
 
 let profileCreatedAt = 0;
+let profileEventFrom: string[] = [];
 // let currentBroadcastingId = '';
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
 
@@ -282,7 +283,7 @@ export const Main = () => {
     contactList,
     event,
   }: {
-    contactList: ContactList;
+    contactList?: ContactList;
     event: NostrEvent;
   }) => {
     setStatusText(t('info.sign.ing'));
@@ -304,11 +305,16 @@ export const Main = () => {
       setStatusText('');
       return;
     }
-    console.log('startedPublish', signedEvent);
-    setStatusText(t('info.publish.start'));
-    for (const [url, connection] of Object.entries(connections)) {
-      if (publishMode === 'all' || contactList.relaysNormalized.includes(url)) {
-        broadcastToRelay(connection, signedEvent);
+    if (contactList) {
+      console.log('startedPublish', signedEvent);
+      setStatusText(t('info.publish.start'));
+      for (const [url, connection] of Object.entries(connections)) {
+        if (
+          publishMode === 'all' ||
+          contactList.relaysNormalized.includes(url)
+        ) {
+          broadcastToRelay(connection, signedEvent);
+        }
       }
     }
     return signedEvent;
@@ -365,12 +371,14 @@ export const Main = () => {
     const res = await fetch('https://api.nostr.watch/v1/public', {
       mode: 'cors',
     });
-    const publicUrlsOrig = jsonParseOrEmptyArray(await res.text()) as string[];
+    const publicUrlsOrig = shuffle(
+      jsonParseOrEmptyArray(await res.text()) as string[],
+    );
     const publicUrls = separateArrayByN(
       10,
       publicUrlsOrig.map(relayUrlNormalize),
     );
-    for (const [i, urls] of publicUrls.entries()) {
+    urlsLoop: for (const [i, urls] of publicUrls.entries()) {
       setStatusText(
         `${t('info.findMore.start')} (${i * 10 + 1}/${publicUrlsOrig.length})`,
       );
@@ -390,15 +398,64 @@ export const Main = () => {
           break delayLoop;
         }
       }
-      if (profileCreatedAt !== 0) return;
+      if (profileCreatedAt !== 0 && kind3s.length !== 0) break urlsLoop;
       for (const url of urls) {
-        if (connections[url]?.relay) {
+        if (!profileEventFrom.includes(url) && connections[url]?.relay) {
           connections[url].status = 'failed';
           connections[url].relay?.close();
           connections[url].relay = null;
         }
       }
     }
+    setStatusText(
+      profileCreatedAt === 0
+        ? t('info.findMore.notFound')
+        : t('info.findMore.end'),
+    );
+  };
+
+  const recoverWith0Followee = async () => {
+    const relayUrls = shuffle(relayUrlListToBulkAdd.globalFamousFree).slice(-5);
+    const relaysObj: Nip07Relays = Object.fromEntries(
+      relayUrls.map(url => [url, { read: true, write: true }]),
+    );
+    const sendRelayUrls = [...profileEventFrom, ...relayUrls];
+    const now = (Date.now() / 1000) | 0;
+    const kind3 = await signAndPublish({
+      event: {
+        kind: 3,
+        created_at: now,
+        pubkey: login.npubHex,
+        content: JSON.stringify(relaysObj),
+        tags: [['p', login.npubHex]],
+      },
+    });
+    const kind10002 = await signAndPublish({
+      event: {
+        kind: 10002,
+        created_at: now,
+        pubkey: login.npubHex,
+        content: '',
+        tags: relayUrls.map(url => ['r', url]),
+      },
+    });
+    if (!kind3 || !kind10002) return;
+    // const contactList = kind3ToContactList({ event: kind3, eventFrom: ['<>'] });
+    for (const url of sendRelayUrls) {
+      (async () => {
+        if (!connections[url]) {
+          await addConnection(url);
+        } else if (connections[url].status === 'disconnected') {
+          await addConnection(url, true);
+        }
+        await broadcastToRelay(connections[url], profile.event);
+        await broadcastToRelay(connections[url], kind3);
+        await broadcastToRelay(connections[url], kind10002);
+      })();
+    }
+    kind3s.push({ event: kind3, eventFrom: ['<>'] });
+    kind3s.push({ event: kind10002, eventFrom: ['<>'] });
+    kind3sUpdate();
   };
 
   const addConnection = async (url: string, retry?: boolean) => {
@@ -447,6 +504,7 @@ export const Main = () => {
             setStatusText(t('info.showingFollows'));
           }
           profileCreatedAt = event.created_at;
+          profileEventFrom = [url];
           const content = JSON.parse(event.content);
           setProfile({
             loaded: true,
@@ -456,7 +514,10 @@ export const Main = () => {
             username: content.username || content.name || '',
             about: content.about || '',
             picture: content.picture || '',
+            event,
           });
+        } else if (event.created_at === profileCreatedAt) {
+          profileEventFrom.push(url);
         }
       }
       let kind3sUpdated = false;
@@ -523,6 +584,7 @@ export const Main = () => {
     connections = {};
     kind3s = [];
     profileCreatedAt = 0;
+    profileEventFrom = [];
     relays.forEach(url => {
       addConnection(url);
     });
@@ -711,6 +773,21 @@ export const Main = () => {
         <button onClick={addCombinedEventFromSelection}>
           {t('action.selected.combine')}
         </button>
+        {writable && profile.loaded && !contactLists.length && (
+          <button
+            onClick={() => {
+              const sendRelayCount = 5 + profileEventFrom.length;
+              if (
+                confirm(
+                  t('action.send.overwrite.confirm', 0, 5, sendRelayCount),
+                )
+              ) {
+                recoverWith0Followee();
+              }
+            }}>
+            {t('action.followee0')}
+          </button>
+        )}
       </div>
       <div class="contact-events">
         {contactLists
