@@ -1,4 +1,4 @@
 #app {
-  width: min(100vw, 800px);
+  width: min(calc(100vw - 2rem), 800px);
   margin: 0 1rem;
 }
