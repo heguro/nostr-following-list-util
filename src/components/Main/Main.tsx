@@ -16,9 +16,12 @@ import {
 } from '../../lib/kinds';
 import * as NostrTools from '../../lib/nostrTools';
 import {
+  delay,
+  jsonParseOrEmptyArray,
   msecToDateString,
   relayUrlNormalize,
   secToDateString,
+  separateArrayByN,
   shuffle,
   uniqLast,
 } from '../../lib/util';
@@ -45,6 +48,8 @@ const relayDefaults: Nip07Relays = {
 
 const relayUrlListToBulkAdd = {
   globalFamousFree: [
+    // 海外有名リレー
+    // 以下の7つから5つランダムで選択
     'wss://relay.damus.io',
     'wss://nos.lol',
     'wss://relay.current.fyi',
@@ -53,19 +58,9 @@ const relayUrlListToBulkAdd = {
     'wss://nostr-pub.wellorder.net',
     'wss://offchain.pub',
   ],
-  japaneseGlobalTLWatchable: [
-    // Japanese IP addr only relays.
-    'wss://relay-jp.nostr.wirednet.jp',
-    'wss://nostr.h3z.jp',
-    'wss://nostr.holybea.com',
-    'wss://test.relay.nostrich.day',
-    'wss://relay.nostr.or.jp',
-    'wss://nostream.ocha.one',
-    'wss://relayer.ocha.one',
-  ],
   japanese: [
-    // 'wss://relay.nostr.wirednet.jp',
-    // 'wss://nostrja-kari.heguro.com',
+    // 日本リレー （常時全追加）
+    // 言語設定「日本語」の場合のみ表示
     'wss://relay-jp.nostr.wirednet.jp',
     'wss://nostr.h3z.jp',
     'wss://nostr-relay.nokotaro.com',
@@ -75,6 +70,9 @@ const relayUrlListToBulkAdd = {
     'wss://nostr.fediverse.jp',
     'wss://nostream.ocha.one',
     'wss://relayer.ocha.one',
+    // 以下保留
+    // 'wss://relay.nostr.wirednet.jp',
+    // 'wss://nostrja-kari.heguro.com',
   ],
 };
 
@@ -362,6 +360,47 @@ export const Main = () => {
     signAndPublish({ contactList, event });
   };
 
+  const startFindMore = async () => {
+    setStatusText(t('info.findMore.start'));
+    const res = await fetch('https://api.nostr.watch/v1/public', {
+      mode: 'cors',
+    });
+    const publicUrlsOrig = jsonParseOrEmptyArray(await res.text()) as string[];
+    const publicUrls = separateArrayByN(
+      10,
+      publicUrlsOrig.map(relayUrlNormalize),
+    );
+    for (const [i, urls] of publicUrls.entries()) {
+      setStatusText(
+        `${t('info.findMore.start')} (${i * 10 + 1}/${publicUrlsOrig.length})`,
+      );
+      for (const url of urls) {
+        if (!connections[url]) addConnection(url);
+      }
+      delayLoop: for (let i = 0; i < 8; i++) {
+        await delay(1000);
+        for (const url of urls) {
+          if (
+            connections[url].status === 'connecting' ||
+            connections[url].status === 'connected'
+          ) {
+            continue delayLoop;
+          }
+          // all urls are either failed or disconnected or ok
+          break delayLoop;
+        }
+      }
+      if (profileCreatedAt !== 0) return;
+      for (const url of urls) {
+        if (connections[url]?.relay) {
+          connections[url].status = 'failed';
+          connections[url].relay?.close();
+          connections[url].relay = null;
+        }
+      }
+    }
+  };
+
   const addConnection = async (url: string, retry?: boolean) => {
     url = relayUrlNormalize(url);
     if (!retry && connections[url]) return;
@@ -391,8 +430,8 @@ export const Main = () => {
     }
     console.log(url, ': connected');
     connection.relay = relay;
-    connection.status = 'connected';
-    if (!retry) {
+    if (connection.status === 'connecting') connection.status = 'connected';
+    if (connection.status === 'connected' && !retry) {
       let kind0available = false;
       let kind3available = false;
       const kind0Event = await relay.get({
@@ -473,7 +512,7 @@ export const Main = () => {
         }, k3(contacts)=${kind3available ? 'found' : 'no'}`,
       );
     }
-    connection.status = 'ok';
+    if (connection.status === 'connected') connection.status = 'ok';
   };
   const initConnect = async () => {
     setStatusText(t('info.findindProfiles'));
@@ -559,12 +598,32 @@ export const Main = () => {
             </button>
             {writable && (
               <button
-                disabled={!contactLists.some(c => c.event.kind === 3)}
+                disabled={
+                  !contactLists.some(c => c.event.kind === 3) ||
+                  JSON.stringify(
+                    contactLists.find(c => c.event.kind === 3)?.relaysObj,
+                  ) ===
+                    JSON.stringify(
+                      contactLists.find(c => c.event.kind === 10002)?.relaysObj,
+                    )
+                }
                 onClick={() => {
                   const contactList = contactLists.find(
                     c => c.event.kind === 3,
                   );
-                  if (contactList) startPublishNewKind10002(contactList);
+                  console.log(
+                    JSON.stringify(contactList?.relaysObj),
+                    '\n',
+                    JSON.stringify(
+                      contactLists.find(c => c.event.kind === 10002)?.relaysObj,
+                    ),
+                    JSON.stringify(contactList?.relaysObj) ===
+                      JSON.stringify(
+                        contactLists.find(c => c.event.kind === 10002)
+                          ?.relaysObj,
+                      ),
+                  );
+                  //if (contactList) startPublishNewKind10002(contactList);
                 }}>
                 {t('action.send.kind10002.basedOnKind3')}
               </button>
@@ -574,6 +633,14 @@ export const Main = () => {
       </div>
       <div class="connection-status">
         <span class="status-text">{statusText}</span>
+        {!profile.loaded && (
+          <button
+            onClick={() => {
+              startFindMore();
+            }}>
+            {t('action.findMore')} ({t('action.findMore.desc')})
+          </button>
+        )}
       </div>
       <div class="events-actions">
         <details class="settings">

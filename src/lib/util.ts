@@ -61,3 +61,11 @@ export const uniq = <T>(arr: T[]) => {
 export const uniqLast = <T>(arr: T[]) => {
   return uniq(arr.reverse()).reverse();
 };
+
+export const separateArrayByN = <T>(length: number, arr: T[]) => {
+  const newArr = [];
+  for (let i = 0; i < arr.length; i += length) {
+    newArr.push(arr.slice(i, i + length));
+  }
+  return newArr;
+};
