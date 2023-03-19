@@ -64,6 +64,8 @@
   "relays.relay.w": "書",
   "relays.reset": "リセット",
   "relays.send": "送信",
+  "setting.addRelayManually.button": "接続",
+  "setting.addRelayManually.label": "リレー手動接続",
   "setting.label": "設定",
   "setting.lang.label": "言語(Language)",
   "setting.publishMode.all": "できるだけ多くのリレー",

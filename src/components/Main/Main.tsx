@@ -102,6 +102,7 @@ export const Main = () => {
     useState<ContactList | null>(null);
   const [relaysInputText, setRelaysInputText] = useState('');
   const [showKind10002, setShowKind10002] = useState(false);
+  const [relayAddInput, setRelayAddInput] = useState('');
 
   const { setLang, lang } = useContext(PrefsContext);
   const { setLogin, login } = useContext(LoginContext);
@@ -741,6 +742,35 @@ export const Main = () => {
                 />
                 {t('setting.showKind10002.label')}
               </label>
+            </div>
+            <div>
+              <form
+                onSubmit={evt => {
+                  evt.preventDefault();
+                  const url = relayUrlNormalize(relayAddInput);
+                  if (/^((ws|http)s?:\/\/)?[\w.-]+(\/|$)/.test(url)) {
+                    if (connections[url]?.status !== 'connected') {
+                      addConnection(relayAddInput, true);
+                    }
+                    setRelayAddInput('');
+                  }
+                }}>
+                <label for="relay-add-input">
+                  {t('setting.addRelayManually.label')}:{' '}
+                  <input
+                    type="text"
+                    id="relay-add-input"
+                    placeholder="wss://relay.damus.io"
+                    value={relayAddInput}
+                    onInput={({ target }) => {
+                      if (target instanceof HTMLInputElement) {
+                        setRelayAddInput(target.value);
+                      }
+                    }}
+                  />
+                  <button type="submit">接続</button>
+                </label>
+              </form>
             </div>
             <div>
               <label for="lang-select">
