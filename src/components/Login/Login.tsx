@@ -143,7 +143,7 @@ export const Login = () => {
               /^npub/.test(loginKeyInput)
                 ? t('text.publicKey')
                 : /^nsec/.test(loginKeyInput)
-                ? t('text.publicKey')
+                ? t('text.privateKey')
                 : `${t('text.privateKey')}/${t('text.publicKey')}`,
             )}
           </button>
