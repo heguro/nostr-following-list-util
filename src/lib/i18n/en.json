@@ -7,7 +7,7 @@
   "action.backup.otherUser": "Public key is not same. Are you sure you want to load list from different user?",
   "action.findMore": "Find more",
   "action.findMore.desc": "Use this if you can't find your profile after reloading the page.",
-  "action.followee0": "Make account usable with 0 Followees",
+  "action.followee0": "Reconfigure account with 0 followees",
   "action.loginWith": "Login with {0}",
   "action.logout.confirm": "Are you sure you want to logout?",
   "action.myself.follow.button": "Follow myself",
