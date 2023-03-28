@@ -44,6 +44,12 @@ const relayDefaults: Nip07Relays = {
   'wss://relay.snort.social': { read: true, write: true },
   'wss://nostr-pub.semisol.dev': { read: true, write: true },
   'wss://nostr.oxtr.dev': { read: true, write: true },
+  'wss://relay.nostr.band': { read: true, write: true },
+  'wss://relay.nostr.wirednet.jp': { read: true, write: true },
+  'wss://offchain.pub': { read: true, write: true },
+  'wss://nostr.wine': { read: true, write: false },
+  'wss://nostr.bitcoiner.social': { read: true, write: true },
+  'wss://nostr.relayer.se': { read: true, write: true },
 };
 
 const relayUrlListToBulkAdd = {
@@ -81,6 +87,7 @@ let profileCreatedAt = 0;
 let profileEventFrom: string[] = [];
 // let currentBroadcastingId = '';
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
+let followers: string[] = [];
 
 export const Main = () => {
   const [profile, setProfile] = useState<Profile>(profileDefault);
@@ -88,6 +95,7 @@ export const Main = () => {
   const [latestGotKind3Time, setLatestGotKind3Time] = useState(0);
   const [latestGotKind10002Time, setLatestGotKind10002Time] = useState(0);
   const [statusText, setStatusText] = useState('');
+  const [followerHexes, setFollowerHexes] = useState<string[]>([]);
   const [publishMode, setPublishMode] = useState<'registered' | 'all'>(
     'registered',
   );
@@ -565,10 +573,37 @@ export const Main = () => {
       if (kind3sUpdated) {
         kind3sUpdate();
       }
+      // test followers
+      const followerEvents = [
+        ...(await relay.list([
+          {
+            kinds: [3],
+            '#p': [login.npubHex],
+            limit: 5000,
+          },
+        ])),
+      ] as NostrEvent[];
+      for (const event of followerEvents) {
+        if (
+          !(
+            (event && event.sig) //&&
+            //NostrTools.validateEvent(event) &&
+            //NostrTools.verifySignature({ ...event, sig: event.sig })
+          )
+        )
+          continue;
+        if (!followers.includes(event.pubkey)) {
+          followers.push(event.pubkey);
+          setFollowerHexes([...followers]);
+        }
+        if (event.kind === 3) kind3available = true;
+      }
       console.log(
         `${url}: ok. k0(profile)=${
           kind0available ? 'found' : 'no'
-        }, k3(contacts)=${kind3available ? 'found' : 'no'}`,
+        }, k3(contacts)=${kind3available ? 'found' : 'no'}, followers=${
+          followerEvents.length
+        }`,
       );
     }
     if (connection.status === 'connected') connection.status = 'ok';
@@ -581,6 +616,7 @@ export const Main = () => {
     });
     connections = {};
     kind3s = [];
+    followers = [];
     profileCreatedAt = 0;
     profileEventFrom = [];
     relays.forEach(url => {
@@ -961,6 +997,14 @@ export const Main = () => {
               <hr />
             </div>
           ))}
+      </div>
+      <div class="temp followers">
+        <p>followers count: {followerHexes.length}</p>
+        <ul>
+          {followerHexes.map(follower => (
+            <li key={follower}>{follower}</li>
+          ))}
+        </ul>
       </div>
       <dialog
         class="dialog-relays"
