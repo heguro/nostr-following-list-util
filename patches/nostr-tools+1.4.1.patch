@@ -1,0 +1,33 @@
+diff --git a/node_modules/nostr-tools/relay.ts b/node_modules/nostr-tools/relay.ts
+index 0073276..c436fc4 100644
+--- a/node_modules/nostr-tools/relay.ts
++++ b/node_modules/nostr-tools/relay.ts
+@@ -1,8 +1,8 @@
+ /* global WebSocket */
+ 
+-import {Event, verifySignature, validateEvent} from './event'
+-import {Filter, matchFilters} from './filter'
+-import {getHex64, getSubscriptionId} from './fakejson'
++import { Event, validateEvent, verifySignature } from './event'
++import { getHex64, getSubscriptionId } from './fakejson'
++import { Filter, matchFilters } from './filter'
+ 
+ type RelayEvent = 'connect' | 'disconnect' | 'error' | 'notice'
+ 
+@@ -69,6 +69,7 @@ export function relayInit(url: string): Relay {
+       ws = new WebSocket(url)
+ 
+       ws.onopen = () => {
++        console.log(url, 'extensions:', ws.extensions);
+         listeners.connect.forEach(cb => cb())
+         resolve()
+       }
+@@ -238,7 +239,7 @@ export function relayInit(url: string): Relay {
+         let timeout = setTimeout(() => {
+           s.unsub()
+           resolve(events)
+-        }, 1500)
++        }, 20000)
+         s.on('eose', () => {
+           s.unsub()
+           clearTimeout(timeout)
