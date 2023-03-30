@@ -17,6 +17,7 @@ import {
 import * as NostrTools from '../../lib/nostrTools';
 import {
   delay,
+  isValidNormalizedRelayUrl,
   jsonParseOrEmptyArray,
   msecToDateString,
   relayUrlNormalize,
@@ -733,7 +734,7 @@ export const Main = () => {
                 onSubmit={evt => {
                   evt.preventDefault();
                   const url = relayUrlNormalize(relayAddInput);
-                  if (/^((ws|http)s?:\/\/)?[\w.-]+(\/|$)/.test(url)) {
+                  if (isValidNormalizedRelayUrl(url)) {
                     if (connections[url]?.status !== 'connected') {
                       addConnection(relayAddInput, true);
                     }
@@ -1096,9 +1097,7 @@ export const Main = () => {
                         const urls = relaysInputText
                           .split('\n')
                           .map(relayUrlNormalize)
-                          .filter(url =>
-                            /^((ws|http)s?:\/\/)?[\w.-]+(\/|$)/.test(url),
-                          )
+                          .filter(url => isValidNormalizedRelayUrl(url))
                           .map(relayUrlNormalize);
                         for (const url of urls) {
                           if (
@@ -1131,10 +1130,10 @@ export const Main = () => {
                       contactListToEdit.relaysObj,
                     )) {
                       const duppedInfo: typeof info | undefined =
-                        contactListToEditOld.relaysObj[url];
+                        newRelaysObj[relayUrlNormalize(url)];
                       newRelaysObj[relayUrlNormalize(url)] = {
-                        read: !duppedInfo?.read || info.read,
-                        write: !duppedInfo?.write || info.write,
+                        read: !!duppedInfo?.read || info.read,
+                        write: !!duppedInfo?.write || info.write,
                       };
                     }
                     setContactListToEdit(
