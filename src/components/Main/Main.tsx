@@ -945,6 +945,9 @@ export const Main = () => {
                               setContactListToEditOld(contactList);
                               setRelaysInputText('');
                               relaysDialogRef.current?.showModal();
+                              document.documentElement.classList.add(
+                                'pull-to-refresh-disabled',
+                              );
                             }}>
                             {t('action.relays.show')}
                           </button>
@@ -969,6 +972,9 @@ export const Main = () => {
         onClick={evt => {
           if (relaysDialogRef.current === evt.target) {
             relaysDialogRef.current?.close();
+            document.documentElement.classList.remove(
+              'pull-to-refresh-disabled',
+            );
             console.log('closed');
           }
         }}>

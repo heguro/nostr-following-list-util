@@ -9,6 +9,11 @@
   box-sizing: border-box;
 }
 
+html.pull-to-refresh-disabled,
+html.pull-to-refresh-disabled body {
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   min-width: 320px;

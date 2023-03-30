@@ -90,6 +90,7 @@
   width: min(calc(100vw - 4rem), calc(500px - 2rem));
   height: min(calc(95vh - 4rem), calc(700px - 2rem));
   overflow-y: scroll;
+  overscroll-behavior-y: contain;
 }
 
 .dialog-header {
