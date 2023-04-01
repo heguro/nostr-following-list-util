@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact/jsx-runtime';
-import { Nip07Nostr, Nip07Relays } from '../../@types/nips';
+import { Nip07Nostr, Nip07Relays, Nip11RelayInfo } from '../../@types/nips';
 import { NostrEvent } from '../../@types/nostrTools';
 import { LoginContext, PrefsContext } from '../../app';
 import { I18nKey, I18nParams, LangNames, i18n } from '../../lib/i18n';
@@ -10,6 +10,7 @@ import {
   Profile,
   contactListToKind10002Event,
   contactListToKind3Event,
+  getNpubOrNullFromHex,
   kind3ToContactList,
   profileDefault,
   updateContactListRelays,
@@ -82,6 +83,7 @@ let profileCreatedAt = 0;
 let profileEventFrom: string[] = [];
 // let currentBroadcastingId = '';
 let kind3s: { eventFrom: string[]; event: NostrEvent }[] = [];
+const nip11RelayInfos: { [relayUrl: string]: Nip11RelayInfo | undefined } = {};
 
 export const Main = () => {
   const [profile, setProfile] = useState<Profile>(profileDefault);
@@ -101,6 +103,8 @@ export const Main = () => {
   const [relaysInputText, setRelaysInputText] = useState('');
   const [showKind10002, setShowKind10002] = useState(false);
   const [relayAddInput, setRelayAddInput] = useState('');
+  const [showNip11RelayInfo, setShowNip11RelayInfo] = useState(false);
+  const [relayInfos, setRelayInfos] = useState<typeof nip11RelayInfos>({});
 
   const { setLang, lang } = useContext(PrefsContext);
   const { setLogin, login } = useContext(LoginContext);
@@ -574,6 +578,7 @@ export const Main = () => {
     }
     if (connection.status === 'connected') connection.status = 'ok';
   };
+
   const initConnect = async () => {
     setStatusText(t('info.findindProfiles'));
     const relays = Object.keys({
@@ -587,6 +592,32 @@ export const Main = () => {
     relays.forEach(url => {
       addConnection(url);
     });
+  };
+
+  const getRelayInfo = async (url: string) => {
+    const httpUrl = relayUrlNormalize(url).replace(/^ws/, 'http');
+    const res = await fetch(httpUrl, {
+      mode: 'cors',
+      headers: {
+        Accept: 'application/nostr+json',
+      },
+    });
+    const info = (await res.json()) as Nip11RelayInfo;
+    nip11RelayInfos[url] = info;
+    setRelayInfos({ ...nip11RelayInfos });
+  };
+
+  const getRelayInfos = async (relays: string[] | Nip07Relays) => {
+    const relayUrls = Array.isArray(relays) ? relays : Object.keys(relays);
+    for (const url of relayUrls) {
+      if (!nip11RelayInfos[url]) {
+        try {
+          await getRelayInfo(url);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
   };
 
   useEffect(() => {
@@ -975,7 +1006,6 @@ export const Main = () => {
             document.documentElement.classList.remove(
               'pull-to-refresh-disabled',
             );
-            console.log('closed');
           }
         }}>
         <div class="relays-container" ref={relaysContainerRef}>
@@ -1042,6 +1072,7 @@ export const Main = () => {
                   }
                   onClick={() => {
                     setContactListToEdit(contactListToEditOld);
+                    getRelayInfos(contactListToEditOld.relaysNormalized);
                   }}>
                   {t('relays.reset')}
                 </button>
@@ -1132,22 +1163,38 @@ export const Main = () => {
                 <button
                   onClick={() => {
                     const newRelaysObj: Nip07Relays = {};
-                    for (const [url, info] of Object.entries(
+                    for (const [url, state] of Object.entries(
                       contactListToEdit.relaysObj,
                     )) {
-                      const duppedInfo: typeof info | undefined =
+                      const duppedState: typeof state | undefined =
                         newRelaysObj[relayUrlNormalize(url)];
                       newRelaysObj[relayUrlNormalize(url)] = {
-                        read: !!duppedInfo?.read || info.read,
-                        write: !!duppedInfo?.write || info.write,
+                        read: !!duppedState?.read || state.read,
+                        write: !!duppedState?.write || state.write,
                       };
                     }
                     setContactListToEdit(
                       updateContactListRelays(contactListToEdit, newRelaysObj),
                     );
+                    getRelayInfos(newRelaysObj);
                   }}>
                   {t('relays.normalize')}
                 </button>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={showNip11RelayInfo}
+                    onChange={event => {
+                      if (event.target instanceof HTMLInputElement) {
+                        setShowNip11RelayInfo(event.target.checked);
+                        if (event.target.checked) {
+                          getRelayInfos(contactListToEdit.relaysNormalized);
+                        }
+                      }
+                    }}
+                  />
+                  Show relay info
+                </label>
               </div>
               <div class="relays-list">
                 <div class="relays-list-header relays-list-relay-url">
@@ -1162,8 +1209,13 @@ export const Main = () => {
                 <div class="relays-list-header relays-list-delete">
                   {t('relays.relay.action')}
                 </div>
-                {Object.entries(contactListToEdit.relaysObj).map(
-                  ([url, info]) => (
+                {Object.entries(contactListToEdit.relaysObj)
+                  .map(([url, state]) => ({
+                    url,
+                    state,
+                    info: relayInfos[relayUrlNormalize(url)],
+                  }))
+                  .map(({ url, state, info }) => (
                     <Fragment key={url}>
                       <div class="relays-list-relay-url">
                         <code>{url}</code>
@@ -1172,7 +1224,7 @@ export const Main = () => {
                         <label>
                           <input
                             type="checkbox"
-                            checked={info.read}
+                            checked={state.read}
                             title="read"
                             onChange={evt => {
                               if (evt.target instanceof HTMLInputElement) {
@@ -1181,7 +1233,7 @@ export const Main = () => {
                                   relaysObj: {
                                     ...contactListToEdit.relaysObj,
                                     [url]: {
-                                      ...info,
+                                      ...state,
                                       read: evt.target.checked,
                                     },
                                   },
@@ -1195,7 +1247,7 @@ export const Main = () => {
                         <label>
                           <input
                             type="checkbox"
-                            checked={info.write}
+                            checked={state.write}
                             title="write"
                             onChange={evt => {
                               if (evt.target instanceof HTMLInputElement) {
@@ -1204,7 +1256,7 @@ export const Main = () => {
                                   relaysObj: {
                                     ...contactListToEdit.relaysObj,
                                     [url]: {
-                                      ...info,
+                                      ...state,
                                       write: evt.target.checked,
                                     },
                                   },
@@ -1231,9 +1283,108 @@ export const Main = () => {
                           {t('relays.relay.delete')}
                         </button>
                       </div>
+                      {showNip11RelayInfo && info && (
+                        <details class="relays-list-relay-info">
+                          <summary>
+                            {info.limitation?.payment_required
+                              ? 'Paid'
+                              : 'Free'}
+                            <span class="relays-list-relay-software-name">
+                              {' '}
+                              {info.software?.replace(
+                                /^.+?:\/\/|\.git$|github\.com\//g,
+                                '',
+                              )}{' '}
+                              {info.version || ''}
+                            </span>
+                          </summary>
+                          <ul>
+                            <li>
+                              Name: <code>{info.name}</code>
+                            </li>
+                            <li>
+                              Description:{' '}
+                              <pre class="relays-list-relay-desc">
+                                <code>{info.description}</code>
+                              </pre>
+                            </li>
+                            {info.pubkey && (
+                              <li>
+                                Contact:{' '}
+                                <code>
+                                  {getNpubOrNullFromHex(info.pubkey) ||
+                                    info.pubkey}
+                                </code>
+                              </li>
+                            )}
+                            {info.contact && (
+                              <li>
+                                Alternative contact: <code>{info.contact}</code>
+                              </li>
+                            )}
+                            <li>
+                              NIPs:{' '}
+                              {info.supported_nips?.map(num => (
+                                <code key={`${url}_${num}`}>{`NIP-${String(
+                                  num,
+                                ).padStart(2, '0')}`}</code>
+                              ))}
+                            </li>
+                            {info.supported_nip_extensions?.length && (
+                              <li>
+                                Extensions:{' '}
+                                {info.supported_nip_extensions?.map(ext => (
+                                  <code
+                                    key={`${url}_${ext}`}>{`NIP-${ext}`}</code>
+                                ))}
+                              </li>
+                            )}
+                            <li>
+                              Software:{' '}
+                              <code>
+                                <a
+                                  target="_blank"
+                                  rel="noreferrer noopener"
+                                  href={info.software?.replace(
+                                    /^git\+|\.git$/g,
+                                    '',
+                                  )}>
+                                  {info.software}
+                                </a>{' '}
+                                {info.version}
+                              </code>
+                            </li>
+                          </ul>
+                          <pre>
+                            <code>
+                              {'// other info\n'}
+                              {JSON.stringify(
+                                Object.fromEntries(
+                                  Object.entries(info).filter(
+                                    ([k]) =>
+                                      !(
+                                        [
+                                          'name',
+                                          'description',
+                                          'pubkey',
+                                          'contact',
+                                          'supported_nips',
+                                          'supported_nip_extensions',
+                                          'software',
+                                          'version',
+                                        ] as (keyof Nip11RelayInfo)[]
+                                      ).includes(k as keyof Nip11RelayInfo),
+                                  ),
+                                ),
+                                null,
+                                2,
+                              )}
+                            </code>
+                          </pre>
+                        </details>
+                      )}
                     </Fragment>
-                  ),
-                )}
+                  ))}
               </div>
             </div>
           )}

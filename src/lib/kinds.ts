@@ -168,3 +168,11 @@ export const updateContactListRelays = (
     relaysObj,
   } satisfies ContactList as ContactList;
 };
+
+export const getNpubOrNullFromHex = (hex: string) => {
+  try {
+    return NostrTools.nip19.npubEncode(hex);
+  } catch {
+    return null;
+  }
+};

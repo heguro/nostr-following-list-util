@@ -130,6 +130,58 @@
   min-height: 2rem;
 }
 
+.relays-list-relay-info {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+  grid-column: 1 / 5;
+}
+
+.relays-list-relay-info code {
+  opacity: 1;
+}
+
+.relays-list-relay-url {
+  display: grid;
+  place-content: center start;
+}
+
+.relays-list-relay-url code {
+  align-items: end;
+}
+
+.relays-list-relay-info summary {
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+}
+
+.relays-list-relay-software-name {
+  font-size: 0.6rem;
+}
+
+.relays-list-relay-info ul {
+  margin: 0;
+  padding: 0;
+  line-height: 1.25em;
+}
+
+.relays-list-relay-info ul li {
+  list-style: none;
+  margin: 0.4rem 0;
+}
+
+.relays-list-relay-info pre {
+  font-size: 0.6rem;
+}
+
+.relays-list-relay-info pre code {
+  font-size: 0.6rem;
+}
+
+.relays-list-relay-desc {
+  font-size: 0.6rem;
+}
+
 .relays-list-read,
 .relays-list-write,
 .relays-list-delete {
