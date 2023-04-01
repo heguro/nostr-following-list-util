@@ -968,25 +968,28 @@ export const Main = () => {
                               ? t('action.myself.unfollow.button')
                               : t('action.myself.follow.button')}
                           </button>
-                          <button
-                            disabled={
-                              !contactLists.some(c => c.event.kind === 3)
-                            }
-                            onClick={() => {
-                              setContactListToEdit(contactList);
-                              setContactListToEditOld(contactList);
-                              setRelaysInputText('');
-                              relaysDialogRef.current?.showModal();
-                              document.documentElement.classList.add(
-                                'pull-to-refresh-disabled',
-                              );
-                            }}>
-                            {t('action.relays.show')}
-                          </button>
                         </>
                       )}
                   </>
                 )}
+                {contactList.event.kind === 3 &&
+                  contactList.createdAt === latestGotKind3Time && (
+                    <>
+                      <button
+                        disabled={!contactLists.some(c => c.event.kind === 3)}
+                        onClick={() => {
+                          setContactListToEdit(contactList);
+                          setContactListToEditOld(contactList);
+                          setRelaysInputText('');
+                          relaysDialogRef.current?.showModal();
+                          document.documentElement.classList.add(
+                            'pull-to-refresh-disabled',
+                          );
+                        }}>
+                        {t('action.relays.show')}
+                      </button>
+                    </>
+                  )}
                 <button
                   onClick={() => {
                     downloadBackupFile(contactList);
@@ -1023,6 +1026,7 @@ export const Main = () => {
                 </button>
                 <button
                   disabled={
+                    !writable ||
                     contactListToEdit.relays.length === 0 ||
                     JSON.stringify(contactListToEdit.relaysObj) ===
                       JSON.stringify(contactListToEditOld.relaysObj)
@@ -1067,6 +1071,7 @@ export const Main = () => {
                 </button>
                 <button
                   disabled={
+                    !writable ||
                     contactListToEdit.relays.length === 0 ||
                     JSON.stringify(contactListToEdit.relaysObj) ===
                       JSON.stringify(contactListToEditOld.relaysObj)
@@ -1128,6 +1133,7 @@ export const Main = () => {
                   />
                   <div class="relays-input-buttons">
                     <button
+                      disabled={!writable}
                       onClick={() => {
                         const newRelaysObj: Nip07Relays = {
                           ...contactListToEdit.relaysObj,
@@ -1162,6 +1168,7 @@ export const Main = () => {
               </div>
               <div class="relays-input-buttons">
                 <button
+                  disabled={!writable}
                   onClick={() => {
                     const newRelaysObj: Nip07Relays = {};
                     for (const [url, state] of Object.entries(
@@ -1224,6 +1231,7 @@ export const Main = () => {
                       <div class="relays-list-read">
                         <label>
                           <input
+                            disabled={!writable}
                             type="checkbox"
                             checked={state.read}
                             title="read"
@@ -1247,6 +1255,7 @@ export const Main = () => {
                       <div class="relays-list-write">
                         <label>
                           <input
+                            disabled={!writable}
                             type="checkbox"
                             checked={state.write}
                             title="write"
@@ -1269,6 +1278,7 @@ export const Main = () => {
                       </div>
                       <div class="relays-list-delete">
                         <button
+                          disabled={!writable}
                           onClick={() => {
                             const newRelaysObj = {
                               ...contactListToEdit.relaysObj,
