@@ -1,11 +1,11 @@
 import { createContext } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
-import { Nip07Nostr, Nip07Relays } from './@types/nip07';
+import { Nip07Nostr, Nip07Relays } from './@types/nips';
 import './app.css';
 import { BadgesMain } from './components/BadgesMain/BadgesMain';
 import { Login } from './components/Login/Login';
 import { Main } from './components/Main/Main';
-import { i18n, I18nKey, I18nParams, Language } from './lib/i18n';
+import { I18nKey, I18nParams, Language, i18n } from './lib/i18n';
 
 declare global {
   var nostr: Nip07Nostr | undefined;

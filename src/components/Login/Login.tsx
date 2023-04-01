@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from 'preact/hooks';
-import { Nip07Nostr } from '../../@types/nip07';
+import { Nip07Nostr } from '../../@types/nips';
 import { LoginContext, PrefsContext } from '../../app';
-import { i18n, I18nKey, I18nParams } from '../../lib/i18n';
+import { I18nKey, I18nParams, i18n } from '../../lib/i18n';
 import * as NostrTools from '../../lib/nostrTools';
 import './Login.css';
 

@@ -1,16 +1,16 @@
 import { useContext, useEffect, useState } from 'preact/hooks';
-import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
+import { Nip07Nostr, Nip07Relays } from '../../@types/nips';
 import { NostrEvent } from '../../@types/nostrTools';
 import { LoginContext, PrefsContext } from '../../app';
-import { i18n, I18nKey, I18nParams, LangNames } from '../../lib/i18n';
+import { I18nKey, I18nParams, LangNames, i18n } from '../../lib/i18n';
 import {
   AcceptedBadge,
   BadgeAward,
   BadgeInfo,
   Connection,
   ContactList,
-  kind3ToContactList,
   Profile,
+  kind3ToContactList,
   profileDefault,
 } from '../../lib/kinds';
 import * as NostrTools from '../../lib/nostrTools';

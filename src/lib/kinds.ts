@@ -1,4 +1,4 @@
-import { Nip07Relays } from '../@types/nip07';
+import { Nip07Relays } from '../@types/nips';
 import { NostrEvent } from '../@types/nostrTools';
 import { jsonParseOrEmptyObject, relayUrlNormalize } from './util';
 

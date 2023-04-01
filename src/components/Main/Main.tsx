@@ -1,16 +1,16 @@
 import { useContext, useEffect, useRef, useState } from 'preact/hooks';
 import { Fragment } from 'preact/jsx-runtime';
-import { Nip07Nostr, Nip07Relays } from '../../@types/nip07';
+import { Nip07Nostr, Nip07Relays } from '../../@types/nips';
 import { NostrEvent } from '../../@types/nostrTools';
 import { LoginContext, PrefsContext } from '../../app';
-import { i18n, I18nKey, I18nParams, LangNames } from '../../lib/i18n';
+import { I18nKey, I18nParams, LangNames, i18n } from '../../lib/i18n';
 import {
   Connection,
   ContactList,
+  Profile,
   contactListToKind10002Event,
   contactListToKind3Event,
   kind3ToContactList,
-  Profile,
   profileDefault,
   updateContactListRelays,
 } from '../../lib/kinds';
