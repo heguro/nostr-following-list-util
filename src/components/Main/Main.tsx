@@ -601,6 +601,7 @@ export const Main = () => {
       headers: {
         Accept: 'application/nostr+json',
       },
+      signal: AbortSignal.timeout(3000),
     });
     const info = (await res.json()) as Nip11RelayInfo;
     nip11RelayInfos[url] = info;
