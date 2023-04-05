@@ -767,8 +767,13 @@ export const Main = () => {
                   evt.preventDefault();
                   const url = relayUrlNormalize(relayAddInput);
                   if (isValidNormalizedRelayUrl(url)) {
-                    if (connections[url]?.status !== 'connected') {
+                    if (!connections[url]) {
+                      addConnection(relayAddInput);
+                    } else if (connections[url]?.status !== 'connected') {
                       addConnection(relayAddInput, true);
+                    }
+                    if (!relayDefaults[url]) {
+                      relayDefaults[url] = { read: true, write: true };
                     }
                     setRelayAddInput('');
                   }

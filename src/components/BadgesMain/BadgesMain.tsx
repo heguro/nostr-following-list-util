@@ -16,6 +16,7 @@ import {
 import * as NostrTools from '../../lib/nostrTools';
 import {
   delay,
+  isValidNormalizedRelayUrl,
   jsonParseOrEmptyArray,
   jsonParseOrEmptyObject,
   relayUrlNormalize,
@@ -82,6 +83,7 @@ export const BadgesMain = () => {
   const [publishMode, setPublishMode] = useState<'registered' | 'all'>('all');
   const [acceptedBadges, setAcceptedBadges] = useState<AcceptedBadge[]>([]);
   const [awardedBadges, setAwardedBadges] = useState<BadgeAward[]>([]);
+  const [relayAddInput, setRelayAddInput] = useState('');
 
   const { setLang, lang } = useContext(PrefsContext);
   const { setLogin, login } = useContext(LoginContext);
@@ -754,6 +756,42 @@ export const BadgesMain = () => {
                   <option value="all">{t('setting.publishMode.all')}</option>
                 </select>
               </label>
+            </div>
+            <div>
+              <form
+                onSubmit={evt => {
+                  evt.preventDefault();
+                  const url = relayUrlNormalize(relayAddInput);
+                  if (isValidNormalizedRelayUrl(url)) {
+                    if (!connections[url]) {
+                      addConnection(relayAddInput);
+                    } else if (connections[url]?.status !== 'connected') {
+                      addConnection(relayAddInput, true);
+                    }
+                    if (!relayDefaults[url]) {
+                      relayDefaults[url] = { read: true, write: true };
+                    }
+                    setRelayAddInput('');
+                  }
+                }}>
+                <label for="relay-add-input">
+                  {t('setting.addRelayManually.label')}:{' '}
+                  <input
+                    type="text"
+                    id="relay-add-input"
+                    placeholder="wss://relay.damus.io"
+                    value={relayAddInput}
+                    onInput={({ target }) => {
+                      if (target instanceof HTMLInputElement) {
+                        setRelayAddInput(target.value);
+                      }
+                    }}
+                  />
+                  <button type="submit">
+                    {t('setting.addRelayManually.button')}
+                  </button>
+                </label>
+              </form>
             </div>
             <div>
               <label for="lang-select">
