@@ -41,12 +41,12 @@ export const relayUrlNormalize = (url: string) => {
   return url
     .replace(/^[⬤\s]+|\s+$/g, '')
     .replace(/^https?:\/\//, 'wss://')
-    .replace(/^(?!wss?:\/\/)([\w.-]+([/?]|$))/, 'wss://$1')
+    .replace(/^(?!wss?:\/\/)([\w.:@-]+([/?]|$))/, 'wss://$1')
     .replace(/(:\/\/[^/]+)\/$/, '$1');
 };
 
 export const isValidNormalizedRelayUrl = (url: string) =>
-  /^((ws|http)s?:\/\/)?[\w.-]+([/?]|$)/.test(url);
+  /^((ws|http)s?:\/\/)?[\w.:@-]+([/?]|$)/.test(url);
 
 export const shuffle = <T>(arr: T[]) => {
   const newArr = [...arr];
