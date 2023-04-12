@@ -1027,6 +1027,41 @@ export const Main = () => {
                       </button>
                     </>
                   )}
+                {contactList.event.kind === 0 &&
+                  contactList.createdAt === profile.createdAt && (
+                    <>
+                      <button
+                        disabled={!contactLists.some(c => c.event.kind === 3)}
+                        onClick={() => {
+                          const input = String(prompt('input new kind0.'));
+                          const json = jsonStringifyOrNull(
+                            jsonParseOrEmptyObject(input),
+                          );
+                          const jsonSpaced = jsonStringifyOrNull(
+                            jsonParseOrEmptyObject(input),
+                            2,
+                          );
+                          if (!json || json === 'null' || json === '{}') {
+                            return alert('error: invalid json');
+                          }
+                          if (
+                            confirm(
+                              'overwrite kind0 with this?\n\n' + jsonSpaced,
+                            )
+                          ) {
+                            startPublishNewOtherEvent({
+                              content: json,
+                              created_at: 1,
+                              kind: 0,
+                              pubkey: login.npubHex,
+                              tags: [],
+                            } satisfies NostrEvent);
+                          }
+                        }}>
+                        Update kind0
+                      </button>
+                    </>
+                  )}
                 <button
                   disabled={contactList.type === 'other'}
                   onClick={() => {
