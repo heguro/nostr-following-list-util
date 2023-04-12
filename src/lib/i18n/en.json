@@ -14,6 +14,7 @@
   "action.myself.follow.confirm": "Following myself. Followees count will be {0}. Are you sur you want to do this?",
   "action.myself.unfollow.button": "Unfollow myself",
   "action.myself.unfollow.confirm": "Unfollowing myself. Followees count will be {0}. Are you sur you want to do this?",
+  "action.recover.deleted": "Recover deleted account",
   "action.relays.show": "Edit relays…",
   "action.reload": "Reload (Reconnect)",
   "action.selected.combine": "Combine selected following lists",
@@ -82,5 +83,6 @@
   "text.logout": "Logout",
   "text.privateKey": "private key",
   "text.publicKey": "public key",
-  "text.recommended": "(Recommended)"
+  "text.recommended": "(Recommended)",
+  "text.restoredAccount": "Restored account"
 }

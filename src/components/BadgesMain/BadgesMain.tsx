@@ -407,6 +407,7 @@ export const BadgesMain = () => {
             username: content.username || content.name || '',
             about: content.about || '',
             picture: content.picture || '',
+            deleted: !!content.deleted,
             event,
           });
         } else if (event.created_at === profileCreatedAt) {
@@ -566,6 +567,7 @@ export const BadgesMain = () => {
                   username: content.username || content.name || '',
                   about: content.about || '',
                   picture: content.picture || '',
+                  deleted: false,
                   event,
                 },
               });

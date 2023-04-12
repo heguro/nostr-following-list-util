@@ -29,6 +29,7 @@ export const profileDefault = {
   about: '',
   picture: '',
   event: eventDefault,
+  deleted: false,
 };
 
 export type Profile = typeof profileDefault;

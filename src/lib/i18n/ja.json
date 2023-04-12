@@ -13,6 +13,7 @@
   "action.myself.follow.confirm": "自分をフォローします。 フォロー数は {0} になります。 よろしいですか？\n (もし現在「何もしていないのにフォローが減った」状態の場合、先にできるだけ復元させることをおすすめします)",
   "action.myself.unfollow.button": "自分をフォロー解除する",
   "action.myself.unfollow.confirm": "自分をフォロー解除します。 フォロー数は {0} になります。 よろしいですか？\n (もし現在「何もしていないのにフォローが減った」状態の場合、先にできるだけ復元させることをおすすめします)",
+  "action.recover.deleted": "削除されたアカウントを復元",
   "action.relays.show": "リレー編集…",
   "action.reload": "リロード (再接続)",
   "action.selected.combine": "選択したリストを結合",
@@ -80,5 +81,6 @@
   "text.logout": "ログアウト",
   "text.privateKey": "秘密鍵",
   "text.publicKey": "公開鍵",
-  "text.recommended": "(推奨)"
+  "text.recommended": "(推奨)",
+  "text.restoredAccount": "復元したアカウント"
 }

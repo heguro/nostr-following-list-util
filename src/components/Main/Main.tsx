@@ -27,6 +27,7 @@ import {
   secToDateString,
   separateArrayByN,
   shuffle,
+  uniq,
   uniqLast,
 } from '../../lib/util';
 import './Main.css';
@@ -470,6 +471,56 @@ export const Main = () => {
     kind3sUpdate();
   };
 
+  const recoverDeletedAccount = async () => {
+    const latestNotDeletedKind0 = kind3s
+      .filter(k => k.event.kind === 0)
+      .map(({ event }) => ({
+        event,
+        contentObj: jsonParseOrEmptyObject(event.content),
+      }))
+      .find(
+        ({ contentObj }) =>
+          contentObj &&
+          !contentObj.deleted &&
+          (contentObj.display_name || contentObj.username || contentObj.name),
+      );
+    const sendRelayUrls = uniq([
+      ...(contactLists.find(c => c.event.kind === 3)?.relaysNormalized ?? []),
+      ...shuffle(relayUrlListToBulkAdd.globalFamousFree).slice(-3),
+    ]);
+    const now = (Date.now() / 1000) | 0;
+    const kind0 = await signAndPublish({
+      event: latestNotDeletedKind0
+        ? ({
+            ...latestNotDeletedKind0.event,
+            created_at: now,
+          } satisfies NostrEvent)
+        : ({
+            created_at: now,
+            kind: 0,
+            pubkey: login.npubHex,
+            content: JSON.stringify({
+              name: t('text.restoredAccount'),
+              display_name: t('text.restoredAccount'),
+            }),
+            tags: [],
+          } satisfies NostrEvent),
+    });
+    if (!kind0) return;
+    for (const url of sendRelayUrls) {
+      (async () => {
+        if (!connections[url]) {
+          await addConnection(url);
+        } else if (connections[url].status === 'disconnected') {
+          await addConnection(url, true);
+        }
+        await broadcastToRelay(connections[url], kind0);
+      })();
+    }
+    kind3s.push({ event: kind0, eventFrom: ['<>'] });
+    kind3sUpdate();
+  };
+
   const addConnection = async (url: string, retry?: boolean) => {
     url = relayUrlNormalize(url);
     if (!retry && connections[url]) return;
@@ -526,6 +577,7 @@ export const Main = () => {
             username: content.username || content.name || '',
             about: content.about || '',
             picture: content.picture || '',
+            deleted: !!content.deleted,
             event,
           });
         } else if (event.created_at === profileCreatedAt) {
@@ -723,6 +775,15 @@ export const Main = () => {
                   if (contactList) startPublishNewKind10002(contactList);
                 }}>
                 {t('action.send.kind10002.basedOnKind3')}
+              </button>
+            )}
+            {writable && profile.deleted && (
+              <button
+                onClick={() => {
+                  if (confirm(`${t('action.recover.deleted')} ?`))
+                    recoverDeletedAccount();
+                }}>
+                {t('action.recover.deleted')}
               </button>
             )}
           </div>
