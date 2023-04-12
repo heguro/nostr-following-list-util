@@ -73,7 +73,7 @@
   "setting.publishMode.all": "As many relays as possible",
   "setting.publishMode.label": "Relays to send",
   "setting.publishMode.registered": "Registered relays",
-  "setting.showKind10002.label": "Show kind10002 (Enable if you know what it is)",
+  "setting.showKind10002.label": "Show kind0/10002 (Enable if you know what it is)",
   "text.close": "Close",
   "text.default": "Default",
   "text.example": "Example",

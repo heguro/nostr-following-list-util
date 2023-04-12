@@ -20,6 +20,8 @@ import {
   delay,
   isValidNormalizedRelayUrl,
   jsonParseOrEmptyArray,
+  jsonParseOrEmptyObject,
+  jsonStringifyOrNull,
   msecToDateString,
   relayUrlNormalize,
   secToDateString,
@@ -337,6 +339,13 @@ export const Main = () => {
     });
   };
 
+  const startPublishNewOtherEvent = async (event: NostrEvent) => {
+    return signAndPublish({
+      contactList: contactLists.find(c => c.event.kind === 3),
+      event: { ...event, created_at: Math.floor(Date.now() / 1000) },
+    });
+  };
+
   const startBroadcast = (contactList: ContactList) => {
     const { event } = contactList;
     console.log('startedBroadcast', event);
@@ -525,6 +534,13 @@ export const Main = () => {
       }
       let kind3sUpdated = false;
       const kind3Events: NostrEvent[] = [
+        ...(await relay.list([
+          {
+            authors: [login.npubHex],
+            kinds: [0],
+            limit: 20,
+          },
+        ])),
         ...(await relay.list([
           {
             authors: [login.npubHex],
@@ -873,9 +889,13 @@ export const Main = () => {
                 <div class="event-contact-count">
                   {t('followings.count')}: {contactList.contacts.length}
                 </div>
-              ) : (
+              ) : contactList.type === 'relays' ? (
                 <div class="event-relays-info">
                   ({t('followings.kind10002')})
+                </div>
+              ) : (
+                <div class="event-relays-info">
+                  (kind:{contactList.event.kind})
                 </div>
               )}
               <div class="event-relays">
@@ -920,10 +940,22 @@ export const Main = () => {
                         {t('action.send.overwrite.button')}
                       </button>
                     )}
+                    {contactList.event.kind !== 3 && (
+                      <button
+                        onClick={() => {
+                          if (confirm('overwrite?')) {
+                            startPublishNewOtherEvent(contactList.event);
+                          }
+                        }}>
+                        {t('action.send.overwrite.button')}
+                      </button>
+                    )}
                     {((contactList.event.kind === 3 &&
                       contactList.createdAt === latestGotKind3Time) ||
                       (contactList.event.kind === 10002 &&
-                        contactList.createdAt === latestGotKind10002Time)) && (
+                        contactList.createdAt === latestGotKind10002Time) ||
+                      (contactList.event.kind === 0 &&
+                        contactList.createdAt === profile?.createdAt)) && (
                       <button
                         onClick={() => {
                           if (
@@ -996,11 +1028,29 @@ export const Main = () => {
                     </>
                   )}
                 <button
+                  disabled={contactList.type === 'other'}
                   onClick={() => {
                     downloadBackupFile(contactList);
                   }}>
                   {t('action.backup.download')}
                 </button>
+                {contactList.type === 'other' && (
+                  <button
+                    onClick={() => {
+                      console.log(contactList.event);
+                      const content = jsonStringifyOrNull(
+                        jsonParseOrEmptyObject(contactList.event.content),
+                        2,
+                      );
+                      if (content && content !== '{}') {
+                        alert(content);
+                      } else {
+                        alert(jsonStringifyOrNull(contactList.event, 2));
+                      }
+                    }}>
+                    {'Show event'}
+                  </button>
+                )}
               </div>
               <hr />
             </div>

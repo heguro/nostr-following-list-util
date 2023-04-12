@@ -71,7 +71,7 @@
   "setting.publishMode.all": "できるだけ多くのリレー",
   "setting.publishMode.label": "送信先リレー",
   "setting.publishMode.registered": "登録済リレー",
-  "setting.showKind10002.label": "kind10002を表示 (わかる人向け)",
+  "setting.showKind10002.label": "kind0/10002を表示 (わかる人向け)",
   "text.close": "閉じる",
   "text.default": "デフォルト",
   "text.example": "例",

@@ -35,7 +35,7 @@ export type Profile = typeof profileDefault;
 
 export type ContactList = {
   id: string;
-  type: 'contacts' | 'relays';
+  type: 'contacts' | 'relays' | 'other';
   createdAt: number;
   contacts: string[];
   relays: string[];
@@ -115,7 +115,8 @@ export const kind3ToContactList = (params: {
         event,
         selected: false,
       }
-    : {
+    : event.kind === 3
+    ? {
         id: event.id || '',
         type: 'contacts',
         createdAt: event.created_at,
@@ -125,6 +126,18 @@ export const kind3ToContactList = (params: {
           jsonParseOrEmptyObject(event.content),
         ).map(relayUrlNormalize),
         relaysObj: jsonParseOrEmptyObject(event.content),
+        eventFrom,
+        event,
+        selected: false,
+      }
+    : {
+        id: event.id || '',
+        type: 'other',
+        createdAt: event.created_at,
+        contacts: [],
+        relays: [],
+        relaysNormalized: [],
+        relaysObj: {},
         eventFrom,
         event,
         selected: false,

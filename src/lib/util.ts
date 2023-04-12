@@ -17,8 +17,11 @@ export const jsonParseOrEmptyArray = (str: string) => {
   }
 };
 
-export const jsonStringifyOrNull = (obj: unknown) => {
+export const jsonStringifyOrNull = (obj: unknown, spaces?: string | number) => {
   try {
+    if (spaces) {
+      return JSON.stringify(obj, null, spaces);
+    }
     return JSON.stringify(obj);
   } catch (e) {
     return null;
