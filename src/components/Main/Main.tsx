@@ -1079,11 +1079,15 @@ export const Main = () => {
                       );
                       if (content && content !== '{}') {
                         alert(content);
-                      } else {
-                        alert(jsonStringifyOrNull(contactList.event, 2));
+                        prompt('copy content', content);
                       }
+                      alert(jsonStringifyOrNull(contactList.event, 2));
+                      prompt(
+                        'copy event',
+                        jsonStringifyOrNull(contactList.event, 2) || '',
+                      );
                     }}>
-                    {'Show event'}
+                    {'Show content/event'}
                   </button>
                 )}
               </div>
