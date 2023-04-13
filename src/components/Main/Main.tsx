@@ -108,6 +108,7 @@ export const Main = () => {
   const [relayAddInput, setRelayAddInput] = useState('');
   const [showNip11RelayInfo, setShowNip11RelayInfo] = useState(false);
   const [relayInfos, setRelayInfos] = useState<typeof nip11RelayInfos>({});
+  const [alwaysShowBroadcast, setAlwaysShowBroadcast] = useState(false);
 
   const { setLang, lang } = useContext(PrefsContext);
   const { setLogin, login } = useContext(LoginContext);
@@ -351,8 +352,16 @@ export const Main = () => {
     const { event } = contactList;
     console.log('startedBroadcast', event);
     setStatusText(t('info.broadcast.start'));
+    const relaysUrl = contactList.relaysNormalized.length
+      ? contactList.relaysNormalized
+      : contactLists.find(c => !!c.relaysNormalized.length)?.relaysNormalized ||
+        [];
     for (const [url, connection] of Object.entries(connections)) {
-      if (publishMode === 'all' || contactList.relaysNormalized.includes(url)) {
+      if (
+        publishMode === 'all' ||
+        !relaysUrl.length ||
+        relaysUrl.includes(url)
+      ) {
         broadcastToRelay(connection, event);
       }
     }
@@ -843,7 +852,11 @@ export const Main = () => {
                 onSubmit={evt => {
                   evt.preventDefault();
                   const url = relayUrlNormalize(relayAddInput);
-                  if (isValidNormalizedRelayUrl(url)) {
+                  console.log(relayAddInput);
+                  if (relayAddInput === 'bc' || relayAddInput === 'broadcast') {
+                    setAlwaysShowBroadcast(true);
+                    setRelayAddInput('');
+                  } else if (isValidNormalizedRelayUrl(url)) {
                     if (!connections[url]) {
                       addConnection(relayAddInput);
                     } else if (connections[url]?.status !== 'connected') {
@@ -978,98 +991,96 @@ export const Main = () => {
                   .join(', ')}
               </div>
               <div class="event-actions">
-                {writable && (
-                  <>
-                    {contactList.event.kind === 3 && (
-                      <button
-                        onClick={() => {
-                          if (
-                            confirm(
-                              t(
-                                'action.send.overwrite.confirm',
-                                contactList.contacts.length,
-                                contactList.relays.length,
-                                (publishMode === 'registered' &&
-                                  contactList.relays.length) ||
-                                  Object.keys(connections).length,
-                              ),
-                            )
-                          ) {
-                            startPublishNewKind3(contactList);
-                          }
-                        }}>
-                        {t('action.send.overwrite.button')}
-                      </button>
-                    )}
-                    {contactList.event.kind !== 3 && (
-                      <button
-                        onClick={() => {
-                          if (confirm('overwrite?')) {
-                            startPublishNewOtherEvent(contactList.event);
-                          }
-                        }}>
-                        {t('action.send.overwrite.button')}
-                      </button>
-                    )}
-                    {((contactList.event.kind === 3 &&
+                {writable && contactList.event.kind === 3 && (
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          t(
+                            'action.send.overwrite.confirm',
+                            contactList.contacts.length,
+                            contactList.relays.length,
+                            (publishMode === 'registered' &&
+                              contactList.relays.length) ||
+                              Object.keys(connections).length,
+                          ),
+                        )
+                      ) {
+                        startPublishNewKind3(contactList);
+                      }
+                    }}>
+                    {t('action.send.overwrite.button')}
+                  </button>
+                )}
+                {writable && contactList.event.kind !== 3 && (
+                  <button
+                    onClick={() => {
+                      if (confirm('overwrite?')) {
+                        startPublishNewOtherEvent(contactList.event);
+                      }
+                    }}>
+                    {t('action.send.overwrite.button')}
+                  </button>
+                )}
+                {(alwaysShowBroadcast ||
+                  (writable &&
+                    ((contactList.event.kind === 3 &&
                       contactList.createdAt === latestGotKind3Time) ||
                       (contactList.event.kind === 10002 &&
                         contactList.createdAt === latestGotKind10002Time) ||
                       (contactList.event.kind === 0 &&
-                        contactList.createdAt === profile?.createdAt)) && (
+                        contactList.createdAt === profile?.createdAt)))) && (
+                  <button
+                    onClick={() => {
+                      if (
+                        contactList.event.kind === 10002 ||
+                        confirm(
+                          t(
+                            'action.send.broadcast.confirm',
+                            contactList.contacts.length,
+                            contactList.relays.length,
+                            (publishMode === 'registered' &&
+                              contactList.relays.length) ||
+                              Object.keys(connections).length,
+                          ),
+                        )
+                      ) {
+                        startBroadcast(contactList);
+                      }
+                    }}>
+                    {t('action.send.broadcast.button')}
+                  </button>
+                )}
+                {writable &&
+                  contactList.event.kind === 3 &&
+                  contactList.createdAt === latestGotKind3Time && (
+                    <>
                       <button
                         onClick={() => {
+                          const unfollow = contactList.contacts.includes(
+                            login.npubHex,
+                          );
+                          const followCount =
+                            contactList.contacts.length + (unfollow ? -1 : 1);
                           if (
-                            contactList.event.kind === 10002 ||
                             confirm(
                               t(
-                                'action.send.broadcast.confirm',
-                                contactList.contacts.length,
-                                contactList.relays.length,
-                                (publishMode === 'registered' &&
-                                  contactList.relays.length) ||
-                                  Object.keys(connections).length,
+                                unfollow
+                                  ? 'action.myself.unfollow.confirm'
+                                  : 'action.myself.follow.confirm',
+                                followCount,
                               ),
                             )
                           ) {
-                            startBroadcast(contactList);
+                            startFollowMyself({ contactList, unfollow });
                           }
                         }}>
-                        {t('action.send.broadcast.button')}
+                        {contactList.contacts.includes(login.npubHex)
+                          ? t('action.myself.unfollow.button')
+                          : t('action.myself.follow.button')}
                       </button>
-                    )}
-                    {contactList.event.kind === 3 &&
-                      contactList.createdAt === latestGotKind3Time && (
-                        <>
-                          <button
-                            onClick={() => {
-                              const unfollow = contactList.contacts.includes(
-                                login.npubHex,
-                              );
-                              const followCount =
-                                contactList.contacts.length +
-                                (unfollow ? -1 : 1);
-                              if (
-                                confirm(
-                                  t(
-                                    unfollow
-                                      ? 'action.myself.unfollow.confirm'
-                                      : 'action.myself.follow.confirm',
-                                    followCount,
-                                  ),
-                                )
-                              ) {
-                                startFollowMyself({ contactList, unfollow });
-                              }
-                            }}>
-                            {contactList.contacts.includes(login.npubHex)
-                              ? t('action.myself.unfollow.button')
-                              : t('action.myself.follow.button')}
-                          </button>
-                        </>
-                      )}
-                  </>
-                )}
+                    </>
+                  )}
                 {contactList.event.kind === 3 &&
                   contactList.createdAt === latestGotKind3Time && (
                     <>
