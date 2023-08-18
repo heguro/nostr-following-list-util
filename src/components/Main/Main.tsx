@@ -1118,7 +1118,7 @@ export const Main = () => {
                           }
                           if (
                             confirm(
-                              'overwrite kind0 with this?\n\n' + jsonSpaced,
+                              `overwrite kind0 with this?\n\n${jsonSpaced}`,
                             )
                           ) {
                             startPublishNewOtherEvent({

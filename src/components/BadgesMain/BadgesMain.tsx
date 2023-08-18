@@ -134,7 +134,7 @@ export const BadgesMain = () => {
     if (!d) return [];
     const acceptedBadges: AcceptedBadge[] = [];
     let lastA = '';
-    for (const [i, tag] of tags.entries()) {
+    for (const [, tag] of tags.entries()) {
       // d, a, e, a, e, ...
       if (tag[0] === 'a') {
         lastA = tag[1];
