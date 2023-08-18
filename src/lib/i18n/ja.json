@@ -33,7 +33,7 @@
   "footer.additional.link": "NostrFluの仕様",
   "footer.additional.title": "追加説明",
   "footer.text.1": "公開鍵でログインした場合、フォローリストの取得・確認のみ可能です。",
-  "footer.text.2": "秘密鍵またはNIP-07でログインした場合、フォローリストの取得・確認と再送信が可能です。",
+  "footer.text.2": "秘密鍵またはブラウザ拡張機能でログインした場合、フォローリストの取得・確認と再送信が可能です。",
   "footer.text.3": "入力された秘密鍵はどこにも送信されず、ブラウザーのメモリ内にのみ保持されます。",
   "footer.text.4": "リレーとの通信状況が常に変動するため、リロードで結果が増減することがあります。",
   "info.broadcast.fail": "配信失敗",
@@ -76,11 +76,12 @@
   "text.close": "閉じる",
   "text.default": "デフォルト",
   "text.example": "例",
+  "text.extension": "ブラウザ拡張機能(NIP-07)",
   "text.loading": "読み込み中",
   "text.login": "ログイン",
   "text.logout": "ログアウト",
   "text.privateKey": "秘密鍵",
   "text.publicKey": "公開鍵",
-  "text.recommended": "(推奨)",
+  "text.recommended": "推奨",
   "text.restoredAccount": "復元したアカウント"
 }

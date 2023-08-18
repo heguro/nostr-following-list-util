@@ -34,7 +34,7 @@
   "footer.additional.link": "Detailed specifications of NostrFlu",
   "footer.additional.title": "Additional info (Japanese, use translator to see)",
   "footer.text.1": "If you log in with a public key, you can only retrieve and check the follow list.",
-  "footer.text.2": "If you log in with your private key or NIP-07, you can retrieve, check, and resend your follow list.",
+  "footer.text.2": "If you log in with your private key or browser extension, you can retrieve, check, and resend your follow list.",
   "footer.text.3": "The entered private key is never sent anywhere and is only kept in the browser's memory.",
   "footer.text.4": "Because connection status with the relay is constantly changing, reloading may increase or decrease the results.",
   "info.broadcast.fail": "Failed to broadcast",
@@ -78,11 +78,12 @@
   "text.close": "Close",
   "text.default": "Default",
   "text.example": "Example",
+  "text.extension": "browser extension (NIP-07)",
   "text.loading": "Loading",
   "text.login": "Login",
   "text.logout": "Logout",
   "text.privateKey": "private key",
   "text.publicKey": "public key",
-  "text.recommended": "(Recommended)",
+  "text.recommended": "Recommended",
   "text.restoredAccount": "Restored account"
 }

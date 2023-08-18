@@ -696,7 +696,7 @@ export const BadgesMain = () => {
             {t(
               'info.loggedInWith',
               {
-                nip07: 'NIP-07',
+                nip07: t('text.extension'),
                 npub: t('text.publicKey'),
                 nsec: t('text.privateKey'),
               }[login.type],
@@ -752,8 +752,8 @@ export const BadgesMain = () => {
                     }
                   }}>
                   <option value="registered">
-                    {t('setting.publishMode.registered')}{' '}
-                    {t('text.recommended')}
+                    {t('setting.publishMode.registered')} (
+                    {t('text.recommended')})
                   </option>
                   <option value="all">{t('setting.publishMode.all')}</option>
                 </select>

@@ -89,8 +89,8 @@ export const Login = () => {
               setLoginStatus('');
             });
           }}>
-          {t('action.loginWith', 'NIP-07')} {t('text.recommended')}
-          {nip07Available ? '' : ` - ${t('info.nip07.unavailable')}`}
+          {t('action.loginWith', t('text.extension'))} - {t('text.recommended')}
+          {nip07Available ? '' : ` (${t('info.nip07.unavailable')})`}
         </button>
       </div>
       <div>
